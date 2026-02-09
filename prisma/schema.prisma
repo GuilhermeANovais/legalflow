@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Escritorio {
+  id        String   @id @default(uuid())
+  tenantId  String   @unique
+  nome      String   @default("Meu Escritório")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Client {
+  id               String   @id @default(uuid())
+  tenantId         String
+  nome             String
+  tipo             String   @default("PF") // PF ou PJ
+  documento        String   // CPF ou CNPJ
+  email            String?
+  telefone         String?
+  endereco         String?
+  personalDriveUrl String?
+  status           String   @default("ATIVO")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  processos        Processo[]
+
+  @@index([tenantId])
+}
+
+enum ProcessoStatus {
+  ATIVO
+  ARQUIVADO
+}
+
+enum Prioridade {
+  ALTA
+  MEDIA
+  BAIXA
+}
+
+model Processo {
+  id             String   @id @default(uuid())
+  tenantId       String
+  numero         String   
+  titulo         String   
+  area           String   @default("Cível") 
+  fase           String   @default("Conhecimento") 
+  prioridade     String   @default("Normal") 
+  valorCausa     Float    @default(0)
+  parteContraria String?
+  
+  // --- CAMPOS NOVOS E CORRIGIDOS ---
+  dataPrazo      DateTime? // Próximo vencimento
+  resultado      String?   // "Procedente", "Improcedente", "Acordo"
+  status         String    @default("ATIVO") // ATIVO ou ARQUIVADO (Apenas uma vez!)
+
+  // Relacionamentos
+  clienteId      String
+  cliente        Client   @relation(fields: [clienteId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId])
+}
