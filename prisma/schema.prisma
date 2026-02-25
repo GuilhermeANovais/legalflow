@@ -57,17 +57,40 @@ model Processo {
   valorCausa     Float    @default(0)
   parteContraria String?
   
-  // --- CAMPOS NOVOS E CORRIGIDOS ---
+  // --- CAMPOS DO SISTEMA ---
   dataPrazo      DateTime? // Próximo vencimento
   resultado      String?   // "Procedente", "Improcedente", "Acordo"
-  status         String    @default("ATIVO") // ATIVO ou ARQUIVADO (Apenas uma vez!)
+  status         String    @default("ATIVO") // ATIVO ou ARQUIVADO
+
+  // --- CAMPOS SINCRONIZADOS VIA CNJ ---
+  tribunal        String?   // Ex: "TJSP"
+  orgaoJulgador   String?   // Ex: "1ª Vara Cível"
+  classeProcessual String?  // Ex: "Procedimento Comum"
+  dataAjuizamento DateTime? // Data de distribuição
+  sincronizadoEm  DateTime? // Última sincronização com o CNJ
 
   // Relacionamentos
   clienteId      String
   cliente        Client   @relation(fields: [clienteId], references: [id])
+  movimentacoes  Movimentacao[]
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   @@index([tenantId])
+}
+
+model Movimentacao {
+  id         String   @id @default(uuid())
+  processoId String
+  codigo     Int      // Código da movimentação no CNJ
+  nome       String   // Nome/descrição da movimentação
+  dataHora   DateTime // Data e hora da movimentação
+
+  processo   Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+
+  @@unique([processoId, codigo, dataHora]) // Evita duplicação
+  @@index([processoId])
 }

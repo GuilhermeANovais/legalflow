@@ -10,7 +10,13 @@ export async function GET(req: Request) {
 
     const processos = await db.processo.findMany({
       where: { tenantId: userId },
-      include: { cliente: true },
+      include: {
+        cliente: true,
+        movimentacoes: {
+          orderBy: { dataHora: 'desc' },
+          take: 5,
+        },
+      },
       orderBy: { updatedAt: 'desc' }
     });
 
@@ -60,7 +66,7 @@ export async function PATCH(req: Request) {
     const { id, prioridade, status, resultado } = body; // Recebe ID e a nova Prioridade
 
     const processoAtualizado = await db.processo.update({
-      where: { 
+      where: {
         id,
         tenantId: userId // Segurança extra: garante que o processo é do usuário
       },
@@ -85,7 +91,7 @@ export async function DELETE(req: Request) {
     if (!id) return new NextResponse("ID necessário", { status: 400 });
 
     await db.processo.delete({
-      where: { 
+      where: {
         id,
         tenantId: userId
       }

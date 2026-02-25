@@ -9,7 +9,6 @@ import { redirect } from "next/navigation";
 export default async function LandingPage() {
   const { userId } = await auth();
 
-  // Se já estiver logado, manda direto pro dashboard
   if (userId) {
     redirect("/dashboard");
   }

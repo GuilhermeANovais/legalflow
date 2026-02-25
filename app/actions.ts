@@ -44,7 +44,7 @@ export async function consultarIA(titulo: string, numero: string, fase: string, 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
-    
+
   } catch (error) {
     console.error("Erro AI:", error);
     return "Não foi possível realizar a consulta. Tente novamente.";
@@ -74,6 +74,7 @@ export async function buscarDadosCNJ(numero: string) {
     const resultado = await consultarCNJ(numero);
     return resultado;
   } catch (error: any) {
-    return { found: false, error: error.message };
+    return { found: false as const, error: error.message };
   }
 }
+
