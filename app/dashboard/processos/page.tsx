@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Plus, Scale, Loader2, Wand2, X,
-  Calendar, RefreshCw
+  Calendar, RefreshCw, UserPlus, Users, Shield
 } from "lucide-react";
 import { buscarDadosCNJ } from "@/app/actions";
 import { ToastProvider, useToast } from "@/app/dashboard/components/toast";
@@ -35,6 +35,7 @@ interface Processo {
   status: string;
   resultado: string | null;
   clienteId: string;
+  polo?: string;
   cliente?: Cliente;
   tribunal?: string | null;
   orgaoJulgador?: string | null;
@@ -53,6 +54,7 @@ function ProcessosContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [buscandoCNJ, setBuscandoCNJ] = useState(false);
   const [sincronizando, setSincronizando] = useState<Record<string, boolean>>({});
+  const [isNovoCliente, setIsNovoCliente] = useState(false);
 
   const { showToast } = useToast();
 
@@ -61,11 +63,16 @@ function ProcessosContent() {
     titulo: "",
     numero: "",
     clienteId: "",
+    polo: "ATIVO",
     area: "Cível",
     prioridade: "Normal",
     valorCausa: "",
     fase: "Inicial",
     dataPrazo: "",
+    // Campos de novo cliente inline
+    novoClienteNome: "",
+    novoClienteDocumento: "",
+    novoClienteTipo: "PF",
     // Campos CNJ
     tribunal: "",
     orgaoJulgador: "",
@@ -215,32 +222,67 @@ function ProcessosContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Monta payload dependendo se é novo cliente ou existente
+      const payload: Record<string, unknown> = {
+        titulo: formData.titulo,
+        numero: formData.numero,
+        polo: formData.polo,
+        area: formData.area,
+        prioridade: formData.prioridade,
+        valorCausa: formData.valorCausa,
+        fase: formData.fase,
+        dataPrazo: formData.dataPrazo,
+        tribunal: formData.tribunal,
+        orgaoJulgador: formData.orgaoJulgador,
+        classeProcessual: formData.classeProcessual,
+        assuntoPrincipal: formData.assuntoPrincipal,
+        sistema: formData.sistema,
+        dataAjuizamento: formData.dataAjuizamento,
+      };
+
+      if (isNovoCliente) {
+        payload.novoCliente = {
+          nome: formData.novoClienteNome,
+          documento: formData.novoClienteDocumento,
+          tipo: formData.novoClienteTipo,
+        };
+      } else {
+        payload.clienteId = formData.clienteId;
+      }
+
       const res = await fetch("/api/processos", {
         method: "POST",
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText);
+      }
 
       setIsModalOpen(false);
+      setIsNovoCliente(false);
       setFormData({
-        titulo: "", numero: "", clienteId: "", area: "Cível",
+        titulo: "", numero: "", clienteId: "", polo: "ATIVO", area: "Cível",
         prioridade: "Normal", valorCausa: "", fase: "Inicial", dataPrazo: "",
+        novoClienteNome: "", novoClienteDocumento: "", novoClienteTipo: "PF",
         tribunal: "", orgaoJulgador: "", classeProcessual: "",
         assuntoPrincipal: "", sistema: "", dataAjuizamento: "",
       });
       carregarDados();
-      showToast("Processo cadastrado com sucesso!", "success");
+      showToast(isNovoCliente ? "Processo e cliente cadastrados com sucesso!" : "Processo cadastrado com sucesso!", "success");
     } catch (error) {
-      showToast("Erro ao salvar processo.", "error");
+      showToast(error instanceof Error ? error.message : "Erro ao salvar processo.", "error");
     }
   };
 
   const resetModal = () => {
     setIsModalOpen(false);
+    setIsNovoCliente(false);
     setFormData({
-      titulo: "", numero: "", clienteId: "", area: "Cível",
+      titulo: "", numero: "", clienteId: "", polo: "ATIVO", area: "Cível",
       prioridade: "Normal", valorCausa: "", fase: "Inicial", dataPrazo: "",
+      novoClienteNome: "", novoClienteDocumento: "", novoClienteTipo: "PF",
       tribunal: "", orgaoJulgador: "", classeProcessual: "",
       assuntoPrincipal: "", sistema: "", dataAjuizamento: "",
     });
@@ -391,14 +433,118 @@ function ProcessosContent() {
                 />
               </div>
 
-              {/* Cliente */}
+              {/* Polo de Atuação */}
               <div>
-                <label className="text-sm font-bold text-slate-700">Cliente</label>
-                <select required className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  value={formData.clienteId} onChange={e => setFormData({ ...formData, clienteId: e.target.value })}>
-                  <option value="">Selecione um cliente...</option>
-                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                </select>
+                <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                  <Shield size={14} className="text-slate-400" />
+                  Polo de Atuação
+                </label>
+                <div className="grid grid-cols-2 gap-3 mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, polo: "ATIVO" })}
+                    className={`p-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 ${formData.polo === "ATIVO"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-100"
+                        : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
+                      }`}
+                  >
+                    <div className="text-xs opacity-70 mb-0.5">Polo Ativo</div>
+                    Autor / Exequente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, polo: "PASSIVO" })}
+                    className={`p-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 ${formData.polo === "PASSIVO"
+                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm shadow-amber-100"
+                        : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
+                      }`}
+                  >
+                    <div className="text-xs opacity-70 mb-0.5">Polo Passivo</div>
+                    Réu / Executado
+                  </button>
+                </div>
+              </div>
+
+              {/* Cliente - Toggle entre existente e novo */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                    {isNovoCliente ? <UserPlus size={14} className="text-blue-500" /> : <Users size={14} className="text-slate-400" />}
+                    Cliente
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNovoCliente(!isNovoCliente);
+                      // Limpa campos ao alternar
+                      setFormData(prev => ({
+                        ...prev,
+                        clienteId: "",
+                        novoClienteNome: "",
+                        novoClienteDocumento: "",
+                        novoClienteTipo: "PF",
+                      }));
+                    }}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${isNovoCliente
+                        ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      }`}
+                  >
+                    {isNovoCliente ? (
+                      <><Users size={12} /> Selecionar Existente</>
+                    ) : (
+                      <><UserPlus size={12} /> + Novo Cliente</>
+                    )}
+                  </button>
+                </div>
+
+                {!isNovoCliente ? (
+                  /* Select de cliente existente */
+                  <select
+                    required
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    value={formData.clienteId}
+                    onChange={e => setFormData({ ...formData, clienteId: e.target.value })}
+                  >
+                    <option value="">Selecione um cliente...</option>
+                    {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                ) : (
+                  /* Sub-formulário inline de novo cliente */
+                  <div className="space-y-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Dados do Novo Cliente</div>
+                    <div>
+                      <input
+                        required
+                        className="w-full p-3 bg-white rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        value={formData.novoClienteNome}
+                        onChange={e => setFormData({ ...formData, novoClienteNome: e.target.value })}
+                        placeholder="Nome completo ou Razão Social"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <input
+                          required
+                          className="w-full p-3 bg-white rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                          value={formData.novoClienteDocumento}
+                          onChange={e => setFormData({ ...formData, novoClienteDocumento: e.target.value })}
+                          placeholder="CPF ou CNPJ"
+                        />
+                      </div>
+                      <div>
+                        <select
+                          className="w-full p-3 bg-white rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          value={formData.novoClienteTipo}
+                          onChange={e => setFormData({ ...formData, novoClienteTipo: e.target.value })}
+                        >
+                          <option value="PF">Pessoa Física</option>
+                          <option value="PJ">Pessoa Jurídica</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Prazo e Prioridade */}

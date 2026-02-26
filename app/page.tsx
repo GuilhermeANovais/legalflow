@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { 
-  ArrowRight, CheckCircle2, Shield, Zap, 
-  BarChart3, Brain, Scale, Gavel 
+import {
+  ArrowRight, CheckCircle2, Shield, Zap,
+  BarChart3, Brain, Scale, Gavel
 } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
@@ -32,13 +32,13 @@ export default async function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link 
+            <Link
               href="/sign-in"
               className="text-slate-600 hover:text-slate-900 font-bold text-sm"
             >
               Entrar
             </Link>
-            <Link 
+            <Link
               href="/sign-up"
               className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
             >
@@ -54,26 +54,26 @@ export default async function LandingPage() {
           <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Zap size={14} fill="currentColor" /> Nova IA Jurídica 2.0
           </div>
-          
+
           <h1 className="text-5xl md:text-7xl font-bold text-slate-900 leading-tight mb-6 tracking-tight animate-in fade-in slide-in-from-bottom-8 duration-700">
-            Sua advocacia <br/>
+            Sua advocacia <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">
               inteligente e organizada.
             </span>
           </h1>
-          
+
           <p className="text-lg md:text-xl text-slate-500 mb-10 max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-10 duration-1000">
             Abandone as planilhas. Gerencie processos, prazos e clientes com a ajuda de uma IA que lê e resume seus casos em segundos.
           </p>
-          
+
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-12 duration-1000">
-            <Link 
+            <Link
               href="/sign-up"
               className="w-full md:w-auto bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center justify-center gap-2"
             >
               Criar Conta Grátis <ArrowRight size={20} />
             </Link>
-            <Link 
+            <Link
               href="#demo"
               className="w-full md:w-auto bg-white text-slate-700 border border-slate-200 px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center"
             >
@@ -83,29 +83,29 @@ export default async function LandingPage() {
 
           {/* Mini Mockup / Social Proof */}
           <div className="mt-16 p-4 bg-white rounded-3xl shadow-2xl border border-slate-100 rotate-1 hover:rotate-0 transition-transform duration-500">
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                   <div className="flex items-center gap-2 mb-2">
-                      <div className="p-2 bg-green-100 text-green-700 rounded-lg"><CheckCircle2 size={16} /></div>
-                      <span className="font-bold text-slate-700">Prazos em Dia</span>
-                   </div>
-                   <div className="h-2 bg-slate-200 rounded-full w-2/3"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-2 bg-green-100 text-green-700 rounded-lg"><CheckCircle2 size={16} /></div>
+                  <span className="font-bold text-slate-700">Prazos em Dia</span>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                   <div className="flex items-center gap-2 mb-2">
-                      <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg"><Brain size={16} /></div>
-                      <span className="font-bold text-slate-700">IA Ativa</span>
-                   </div>
-                   <div className="h-2 bg-slate-200 rounded-full w-3/4"></div>
+                <div className="h-2 bg-slate-200 rounded-full w-2/3"></div>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg"><Brain size={16} /></div>
+                  <span className="font-bold text-slate-700">IA Ativa</span>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                   <div className="flex items-center gap-2 mb-2">
-                      <div className="p-2 bg-blue-100 text-blue-700 rounded-lg"><Gavel size={16} /></div>
-                      <span className="font-bold text-slate-700">CNJ Integrado</span>
-                   </div>
-                   <div className="h-2 bg-slate-200 rounded-full w-1/2"></div>
+                <div className="h-2 bg-slate-200 rounded-full w-3/4"></div>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-2 bg-blue-100 text-blue-700 rounded-lg"><Gavel size={16} /></div>
+                  <span className="font-bold text-slate-700">CNJ Integrado</span>
                 </div>
-             </div>
+                <div className="h-2 bg-slate-200 rounded-full w-1/2"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -180,7 +180,7 @@ export default async function LandingPage() {
           <p className="text-indigo-100 mb-8 text-lg max-w-2xl mx-auto">
             Junte-se a advogados que já economizam horas de trabalho manual todos os dias.
           </p>
-          <Link 
+          <Link
             href="/sign-up"
             className="inline-flex bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-all shadow-lg"
           >

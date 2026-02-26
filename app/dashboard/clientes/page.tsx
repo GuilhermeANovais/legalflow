@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Search, Plus, User, MapPin, Phone, Mail, 
-  Loader2, Building, ShieldCheck 
+import {
+  Search, Plus, User, MapPin, Phone, Mail,
+  Loader2, Building, ShieldCheck
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -65,7 +65,7 @@ export default function ClientesPage() {
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">Gestão de Clientes</h2>
           <p className="text-slate-500">Cadastre e gerencie sua base de contatos.</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsModalOpen(true)}
           className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg"
         >
@@ -94,7 +94,7 @@ export default function ClientesPage() {
                   {cliente.status}
                 </span>
               </div>
-              
+
               <h3 className="text-xl font-bold text-slate-900 mb-1">{cliente.nome}</h3>
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
                 <ShieldCheck size={14} className="text-emerald-500" />
@@ -114,7 +114,7 @@ export default function ClientesPage() {
                 )}
                 {cliente.endereco && (
                   <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <MapPin size={16} className="text-slate-400" /> 
+                    <MapPin size={16} className="text-slate-400" />
                     <span className="truncate">{cliente.endereco}</span>
                   </div>
                 )}
@@ -129,14 +129,14 @@ export default function ClientesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl animate-in zoom-in-95">
             <h3 className="text-2xl font-bold mb-6">Novo Cliente</h3>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Tipo</label>
-                  <select 
+                  <select
                     value={formData.tipo}
-                    onChange={(e) => setFormData({...formData, tipo: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                     className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
                   >
                     <option value="PF">Pessoa Física</option>
@@ -145,46 +145,46 @@ export default function ClientesPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Documento (CPF/CNPJ)</label>
-                  <input 
+                  <input
                     required
                     value={formData.documento}
-                    onChange={(e) => setFormData({...formData, documento: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, documento: e.target.value })}
                     className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
                     placeholder="000.000.000-00"
                   />
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <label className="text-sm font-bold text-slate-700">Nome Completo</label>
-                  <input 
+                  <input
                     required
                     value={formData.nome}
-                    onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                     className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
                     placeholder="Nome do cliente ou Razão Social"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">E-mail</label>
-                  <input 
+                  <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">WhatsApp / Telefone</label>
-                  <input 
+                  <input
                     value={formData.telefone}
-                    onChange={(e) => setFormData({...formData, telefone: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                     className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
                   />
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <label className="text-sm font-bold text-slate-700">Endereço Completo</label>
-                  <input 
+                  <input
                     value={formData.endereco}
-                    onChange={(e) => setFormData({...formData, endereco: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
                     className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
                     placeholder="Rua, Número, Bairro, Cidade - UF"
                   />
@@ -192,15 +192,15 @@ export default function ClientesPage() {
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100"
                 >
                   Cancelar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={submitting}
                   className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2"
                 >

@@ -46,7 +46,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <Gavel className="mr-2 text-blue-500" />
           Legal<span className="text-blue-500">Flow</span>
         </div>
-        
+
         <nav className="flex-1 px-4 py-6 space-y-2">
           {navItems.map((item) => (
             <Link
@@ -75,11 +75,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       <main className="flex-1 md:ml-64 transition-all">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-8 sticky top-0 z-40">
           <div className="flex items-center gap-4">
-             {/* Mostra o nome do escritório vindo do banco */}
-             <h1 className="text-lg font-semibold text-slate-800">{escritorio.nome}</h1>
+            {/* Mostra o nome do escritório vindo do banco */}
+            <h1 className="text-lg font-semibold text-slate-800">{escritorio.nome}</h1>
           </div>
         </header>
-        
+
         <div className="p-6 md:p-8 max-w-7xl mx-auto">
           {children}
         </div>

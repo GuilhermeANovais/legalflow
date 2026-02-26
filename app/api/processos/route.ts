@@ -37,9 +37,19 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       titulo, numero, clienteId, area, valorCausa, prioridade, fase, dataPrazo,
+      polo, novoCliente,
       // Campos CNJ (vindos do autopreencher)
       tribunal, orgaoJulgador, classeProcessual, assuntoPrincipal, sistema, dataAjuizamento
     } = body;
+
+    // Validação: precisa de clienteId OU novoCliente
+    if (!clienteId && !novoCliente) {
+      return new NextResponse("Cliente é obrigatório. Selecione um existente ou cadastre um novo.", { status: 400 });
+    }
+
+    if (novoCliente && (!novoCliente.nome || !novoCliente.documento)) {
+      return new NextResponse("Nome e CPF/CNPJ são obrigatórios para novo cliente.", { status: 400 });
+    }
 
     const hasCnjData = !!(tribunal || classeProcessual);
 
@@ -50,29 +60,54 @@ export async function POST(req: Request) {
       return isNaN(dateObj.getTime()) ? null : dateObj;
     };
 
-    const processo = await db.processo.create({
-      data: {
-        tenantId: userId,
-        titulo,
-        numero: numero || "S/N",
-        clienteId,
-        area,
-        fase: fase || "Inicial",
-        prioridade,
-        valorCausa: parseFloat(valorCausa || 0),
-        status: "ATIVO",
-        dataPrazo: parseDateSafe(dataPrazo),
-        // Campos CNJ (se vieram do autopreencher)
-        ...(hasCnjData && {
-          tribunal,
-          orgaoJulgador,
-          classeProcessual,
-          assuntoPrincipal,
-          sistema,
-          dataAjuizamento: parseDateSafe(dataAjuizamento),
-          sincronizadoEm: new Date(),
-        }),
+    // Prepara os dados do processo (sem clienteId por enquanto)
+    const processoData = {
+      tenantId: userId,
+      titulo,
+      numero: numero || "S/N",
+      area,
+      fase: fase || "Inicial",
+      prioridade,
+      polo: polo || "ATIVO",
+      valorCausa: parseFloat(valorCausa || 0),
+      status: "ATIVO",
+      dataPrazo: parseDateSafe(dataPrazo),
+      // Campos CNJ (se vieram do autopreencher)
+      ...(hasCnjData && {
+        tribunal,
+        orgaoJulgador,
+        classeProcessual,
+        assuntoPrincipal,
+        sistema,
+        dataAjuizamento: parseDateSafe(dataAjuizamento),
+        sincronizadoEm: new Date(),
+      }),
+    };
+
+    // Criação atômica via transação Prisma
+    const processo = await db.$transaction(async (tx) => {
+      let finalClienteId = clienteId;
+
+      // Se vier novoCliente, cria primeiro
+      if (!clienteId && novoCliente) {
+        const clienteCriado = await tx.client.create({
+          data: {
+            tenantId: userId,
+            nome: novoCliente.nome,
+            documento: novoCliente.documento,
+            tipo: novoCliente.tipo || "PF",
+            status: "ATIVO",
+          },
+        });
+        finalClienteId = clienteCriado.id;
       }
+
+      return tx.processo.create({
+        data: {
+          ...processoData,
+          clienteId: finalClienteId,
+        },
+      });
     });
 
     return NextResponse.json(processo);
