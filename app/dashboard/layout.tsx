@@ -20,11 +20,14 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   });
 
   if (!escritorio) {
-    // Cria um padrão se não existir (fallback)
+    // Usa o nome do escritório informado no sign-up (unsafeMetadata) ou fallback
+    const nomeEscritorio =
+      (user.unsafeMetadata?.nomeEscritorio as string) || "Meu Escritório Jurídico";
+
     escritorio = await db.escritorio.create({
       data: {
         tenantId: user.id,
-        nome: "Meu Escritório Jurídico",
+        nome: nomeEscritorio,
       },
     });
   }
