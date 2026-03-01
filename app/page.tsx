@@ -437,7 +437,7 @@ export default async function LandingPage() {
             </nav>
 
             <p className="text-slate-400 text-sm">
-              © 2025 LegalFlow Tecnologia Jurídica.
+              &copy; {new Date().getFullYear()} LegalFlow Tecnologia Jurídica.
             </p>
           </div>
         </div>
