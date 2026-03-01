@@ -18,7 +18,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "LegalFlow — Gestão Jurídica Inteligente com IA",
+  title: "LegalFlow - Gestão Jurídica Inteligente com IA",
   description:
     "Gerencie processos, prazos e clientes com IA. A plataforma que advogados modernos usam para economizar horas de trabalho manual.",
 };
