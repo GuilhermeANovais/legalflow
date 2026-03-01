@@ -31,6 +31,7 @@ model Client {
   updatedAt        DateTime @updatedAt
 
   processos        Processo[]
+  transacoes       Transacao[]
 
   @@index([tenantId])
 }
@@ -61,6 +62,7 @@ model Processo {
   // --- CAMPOS DO SISTEMA ---
   dataPrazo      DateTime? // Próximo vencimento
   resultado      String?   // "Procedente", "Improcedente", "Acordo"
+  arquivadoEm    DateTime? // Data em que o processo foi arquivado
   status         String    @default("ATIVO") // ATIVO ou ARQUIVADO
 
   // --- CAMPOS SINCRONIZADOS VIA CNJ ---
@@ -72,10 +74,14 @@ model Processo {
   dataAjuizamento DateTime? // Data de distribuição
   sincronizadoEm  DateTime? // Última sincronização com o CNJ
 
+  // --- CAMPO FINANCEIRO ---
+  honorariosPercentual Float? // % de honorários pactuada (ex: 30.0 = 30%)
+
   // Relacionamentos
   clienteId      String
   cliente        Client   @relation(fields: [clienteId], references: [id])
   movimentacoes  Movimentacao[]
+  transacoes     Transacao[]
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -96,4 +102,73 @@ model Movimentacao {
 
   @@unique([processoId, codigo, dataHora]) // Evita duplicação
   @@index([processoId])
+}
+
+// === MÓDULO FINANCEIRO ===
+
+enum TipoTransacao {
+  RECEITA
+  DESPESA
+}
+
+enum CategoriaTransacao {
+  HONORARIOS
+  CUSTAS
+  REPASSE_CLIENTE
+  OPERACIONAL_ESCRITORIO
+}
+
+enum StatusTransacao {
+  PENDENTE
+  PAGO
+}
+
+model Transacao {
+  id             String             @id @default(uuid())
+  tenantId       String
+  tipo           TipoTransacao
+  categoria      CategoriaTransacao
+  valor          Float
+  status         StatusTransacao    @default(PENDENTE)
+  descricao      String
+  dataVencimento DateTime
+  dataPagamento  DateTime?
+
+  processoId     String?
+  processo       Processo?          @relation(fields: [processoId], references: [id])
+  clienteId      String?
+  cliente        Client?            @relation(fields: [clienteId], references: [id])
+
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?          // Soft delete — preenchido no fechamento mensal
+
+  @@index([tenantId])
+  @@index([processoId])
+  @@index([clienteId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("transacoes")
+}
+
+model RelatorioMensal {
+  id                    String   @id @default(uuid())
+  tenantId              String
+  mes                   Int      // 1-12
+  ano                   Int      // ex: 2026
+  totalReceitas         Float    @default(0)
+  totalDespesas         Float    @default(0)
+  totalHonorarios       Float    @default(0)
+  totalCustas           Float    @default(0)
+  totalRepasses         Float    @default(0)
+  totalOperacional      Float    @default(0)
+  quantidadeTransacoes  Int      @default(0)
+  saldoMes              Float    @default(0) // receitas - despesas
+  fechadoEm             DateTime @default(now())
+
+  createdAt             DateTime @default(now())
+
+  @@unique([tenantId, mes, ano])
+  @@index([tenantId])
+  @@map("relatorios_mensais")
 }

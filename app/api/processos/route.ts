@@ -117,21 +117,45 @@ export async function POST(req: Request) {
   }
 }
 
-// ATUALIZAR (Mudar Urgência)
+// ATUALIZAR (Prioridade, Arquivar ou Desarquivar)
 export async function PATCH(req: Request) {
   try {
     const { userId } = await auth();
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
     const body = await req.json();
-    const { id, prioridade, status, resultado } = body; // Recebe ID e a nova Prioridade
+    const { id, prioridade, status, resultado } = body;
+
+    if (!id) return new NextResponse("ID é obrigatório", { status: 400 });
+
+    // Monta o objeto de dados condicionalmente
+    const data: Record<string, unknown> = {};
+
+    if (prioridade !== undefined) {
+      data.prioridade = prioridade;
+    }
+
+    if (status === "ARQUIVADO") {
+      // Arquivar: exige resultado e registra data
+      if (!resultado) {
+        return new NextResponse("Resultado é obrigatório para arquivar.", { status: 400 });
+      }
+      data.status = "ARQUIVADO";
+      data.resultado = resultado;
+      data.arquivadoEm = new Date();
+    } else if (status === "ATIVO") {
+      // Desarquivar: limpa resultado e data de arquivamento
+      data.status = "ATIVO";
+      data.resultado = null;
+      data.arquivadoEm = null;
+    }
 
     const processoAtualizado = await db.processo.update({
       where: {
         id,
-        tenantId: userId // Segurança extra: garante que o processo é do usuário
+        tenantId: userId
       },
-      data: { prioridade, status, resultado } // Atualiza os campos enviados
+      data
     });
 
     return NextResponse.json(processoAtualizado);

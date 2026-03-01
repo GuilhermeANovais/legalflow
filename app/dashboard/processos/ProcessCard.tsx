@@ -4,7 +4,7 @@ import {
     Scale, X, CheckCircle2, Calendar,
     MessageCircle, AlertTriangle, Clock, RefreshCw,
     Gavel, MapPin, FileText, Monitor, ChevronDown,
-    Sparkles, Loader2, UserCheck, Brain
+    Sparkles, Loader2, UserCheck, Brain, RotateCcw
 } from "lucide-react";
 import { format, isBefore, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,6 +36,7 @@ interface Processo {
     dataPrazo: string | null;
     status: string;
     resultado: string | null;
+    arquivadoEm: string | null;
     clienteId: string;
     cliente?: Cliente;
     tribunal?: string | null;
@@ -53,7 +54,8 @@ interface ProcessCardProps {
     isSyncing: boolean;
     onDelete: (id: string, e: React.MouseEvent) => void;
     onPrioridadeChange: (id: string, novaPrioridade: string) => void;
-    onConcluir: (id: string, resultado: string) => void;
+    onArquivar: (id: string) => void;
+    onReabrir: (id: string) => void;
     onWhatsApp: (telefone: string | null | undefined, nome: string | undefined) => void;
     onSincronizar: (processoId: string) => void;
 }
@@ -78,7 +80,7 @@ function getPrazoStatus(data: string | null): string {
 
 export default function ProcessCard({
     proc, isSyncing, onDelete, onPrioridadeChange,
-    onConcluir, onWhatsApp, onSincronizar
+    onArquivar, onReabrir, onWhatsApp, onSincronizar
 }: ProcessCardProps) {
     const [expanded, setExpanded] = useState(false);
     const statusPrazo = getPrazoStatus(proc.dataPrazo);
@@ -129,25 +131,32 @@ export default function ProcessCard({
             <div className="px-5 pt-5 pb-3">
                 <div className="flex justify-between items-start mb-3">
                     {/* Prioridade */}
-                    <select
-                        disabled={isArquivado}
-                        value={proc.prioridade}
-                        onChange={(e) => onPrioridadeChange(proc.id, e.target.value)}
-                        className={`appearance-none cursor-pointer pl-3 pr-6 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border outline-none transition-colors ${proc.prioridade === "Urgente"
-                            ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                            : proc.prioridade === "Alta"
-                                ? "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100"
-                                : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
-                            }`}
-                    >
-                        <option value="Normal">Normal</option>
-                        <option value="Alta">Alta</option>
-                        <option value="Urgente">Urgente</option>
-                    </select>
+                    {!isArquivado ? (
+                        <select
+                            value={proc.prioridade}
+                            onChange={(e) => onPrioridadeChange(proc.id, e.target.value)}
+                            className={`appearance-none cursor-pointer pl-3 pr-6 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border outline-none transition-colors ${proc.prioridade === "Urgente"
+                                ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                : proc.prioridade === "Alta"
+                                    ? "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100"
+                                    : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
+                                }`}
+                        >
+                            <option value="Normal">Normal</option>
+                            <option value="Alta">Alta</option>
+                            <option value="Urgente">Urgente</option>
+                        </select>
+                    ) : (
+                        /* Badge de Arquivado com Resultado */
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-700 text-white border border-slate-600 shadow-sm">
+                            <CheckCircle2 size={10} />
+                            Arquivado — {proc.resultado || "Sem resultado"}
+                        </span>
+                    )}
 
                     {/* Toolbar de ações */}
                     <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        {!isArquivado && (
+                        {!isArquivado ? (
                             <>
                                 {/* Botão IA */}
                                 <button
@@ -175,36 +184,38 @@ export default function ProcessCard({
                                 >
                                     <MessageCircle size={14} />
                                 </button>
-                                <div className="relative group/check">
-                                    <button className="p-1.5 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
-                                        <CheckCircle2 size={14} />
-                                    </button>
-                                    <div className="absolute right-0 top-8 hidden group-hover/check:flex flex-col bg-white shadow-xl border border-slate-100 rounded-xl p-2 z-20 w-32 animate-in fade-in zoom-in-95 duration-200">
-                                        <span className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1">Concluir como:</span>
-                                        <button onClick={() => onConcluir(proc.id, "Procedente")} className="text-xs font-bold text-left p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors">Procedente</button>
-                                        <button onClick={() => onConcluir(proc.id, "Improcedente")} className="text-xs font-bold text-left p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors">Improcedente</button>
-                                        <button onClick={() => onConcluir(proc.id, "Acordo")} className="text-xs font-bold text-left p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors">Acordo</button>
-                                    </div>
-                                </div>
+                                {/* Botão Arquivar */}
+                                <button
+                                    onClick={() => onArquivar(proc.id)}
+                                    className="p-1.5 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                    title="Arquivar Processo"
+                                >
+                                    <CheckCircle2 size={14} />
+                                </button>
+                                {/* Botão Excluir */}
+                                <button
+                                    onClick={(e) => onDelete(proc.id, e)}
+                                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Excluir Processo"
+                                >
+                                    <X size={14} />
+                                </button>
                             </>
+                        ) : (
+                            /* Botão Reabrir (apenas cards arquivados) */
+                            <button
+                                onClick={() => onReabrir(proc.id)}
+                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Reabrir Processo"
+                            >
+                                <RotateCcw size={14} />
+                            </button>
                         )}
-                        <button
-                            onClick={(e) => onDelete(proc.id, e)}
-                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Excluir Processo"
-                        >
-                            <X size={14} />
-                        </button>
                     </div>
                 </div>
 
                 {/* Título */}
                 <h3 className="text-base font-bold text-slate-900 mb-2 line-clamp-2 leading-snug min-h-[2.75rem]">
-                    {isArquivado && (
-                        <span className="mr-2 text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-500 font-black align-middle">
-                            ARQUIVADO
-                        </span>
-                    )}
                     {proc.titulo}
                 </h3>
 
@@ -435,14 +446,23 @@ export default function ProcessCard({
                         {proc.cliente?.nome || "Sem cliente"}
                     </span>
                 </div>
-                <div
-                    className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border ${isArquivado
-                        ? "bg-slate-100 text-slate-500 border-slate-200"
-                        : "bg-emerald-50 text-emerald-600 border-emerald-100"
-                        }`}
-                >
-                    {proc.resultado || proc.fase}
-                </div>
+                {isArquivado && proc.arquivadoEm ? (
+                    <div className="text-right">
+                        <span className="text-[9px] text-slate-400 block uppercase font-bold">Arquivado em</span>
+                        <span className="text-[11px] font-bold text-slate-500">
+                            {format(new Date(proc.arquivadoEm), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                    </div>
+                ) : (
+                    <div
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border ${isArquivado
+                            ? "bg-slate-100 text-slate-500 border-slate-200"
+                            : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                            }`}
+                    >
+                        {proc.fase}
+                    </div>
+                )}
             </div>
         </div>
     );
