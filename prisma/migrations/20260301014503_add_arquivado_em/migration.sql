@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Processo" ADD COLUMN     "arquivadoEm" TIMESTAMP(3),
+ADD COLUMN     "polo" TEXT NOT NULL DEFAULT 'ATIVO',
+ALTER COLUMN "prioridade" SET DEFAULT 'MEDIA';

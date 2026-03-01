@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   Plus, Scale, Loader2, Wand2, X,
-  Calendar, RefreshCw, UserPlus, Users, Shield
+  Calendar, RefreshCw, UserPlus, Users, Shield,
+  Archive, Briefcase
 } from "lucide-react";
 import { buscarDadosCNJ } from "@/app/actions";
 import { ToastProvider, useToast } from "@/app/dashboard/components/toast";
@@ -34,6 +35,7 @@ interface Processo {
   dataPrazo: string | null;
   status: string;
   resultado: string | null;
+  arquivadoEm: string | null;
   clienteId: string;
   polo?: string;
   cliente?: Cliente;
@@ -47,6 +49,14 @@ interface Processo {
   movimentacoes?: Movimentacao[];
 }
 
+const RESULTADOS_OPCOES = [
+  "Procedente",
+  "Parcialmente Procedente",
+  "Improcedente",
+  "Acordo",
+  "Extinto/Outros",
+];
+
 function ProcessosContent() {
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -55,6 +65,16 @@ function ProcessosContent() {
   const [buscandoCNJ, setBuscandoCNJ] = useState(false);
   const [sincronizando, setSincronizando] = useState<Record<string, boolean>>({});
   const [isNovoCliente, setIsNovoCliente] = useState(false);
+
+  // --- Estado das abas ---
+  const [abaAtiva, setAbaAtiva] = useState<"ATIVO" | "ARQUIVADO">("ATIVO");
+
+  // --- Estado do Modal de Arquivamento ---
+  const [arquivamentoModal, setArquivamentoModal] = useState<{
+    aberto: boolean;
+    processoId: string | null;
+    resultado: string;
+  }>({ aberto: false, processoId: null, resultado: "" });
 
   const { showToast } = useToast();
 
@@ -102,6 +122,11 @@ function ProcessosContent() {
     });
   };
 
+  // --- Filtro das abas ---
+  const processosAtivos = processos.filter(p => p.status === "ATIVO");
+  const processosArquivados = processos.filter(p => p.status === "ARQUIVADO");
+  const processosFiltrados = abaAtiva === "ATIVO" ? processosAtivos : processosArquivados;
+
   // --- AÇÕES DO USUÁRIO ---
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -132,17 +157,57 @@ function ProcessosContent() {
     }
   };
 
-  const handleConcluir = async (id: string, resultado: string) => {
-    setProcessos(prev => prev.map(p => p.id === id ? { ...p, status: "ARQUIVADO", resultado } : p));
+  // Abrir modal de arquivamento (em vez de arquivar diretamente)
+  const handleAbrirModalArquivamento = (id: string) => {
+    setArquivamentoModal({ aberto: true, processoId: id, resultado: "" });
+  };
+
+  // Confirmar arquivamento com resultado
+  const handleConfirmarArquivamento = async () => {
+    const { processoId, resultado } = arquivamentoModal;
+    if (!processoId || !resultado) {
+      showToast("Selecione o resultado do processo.", "error");
+      return;
+    }
+
+    // Optimistic update
+    setProcessos(prev => prev.map(p =>
+      p.id === processoId
+        ? { ...p, status: "ARQUIVADO", resultado, arquivadoEm: new Date().toISOString() }
+        : p
+    ));
+    setArquivamentoModal({ aberto: false, processoId: null, resultado: "" });
 
     try {
       await fetch("/api/processos", {
         method: "PATCH",
-        body: JSON.stringify({ id, status: "ARQUIVADO", resultado })
+        body: JSON.stringify({ id: processoId, status: "ARQUIVADO", resultado }),
       });
-      showToast(`Processo concluído como "${resultado}".`, "success");
+      showToast(`Processo arquivado como "${resultado}".`, "success");
     } catch (error) {
       showToast("Erro ao arquivar processo.", "error");
+      carregarDados();
+    }
+  };
+
+  // Reabrir processo arquivado
+  const handleReabrir = async (id: string) => {
+    // Optimistic update
+    setProcessos(prev => prev.map(p =>
+      p.id === id
+        ? { ...p, status: "ATIVO", resultado: null, arquivadoEm: null }
+        : p
+    ));
+
+    try {
+      await fetch("/api/processos", {
+        method: "PATCH",
+        body: JSON.stringify({ id, status: "ATIVO" }),
+      });
+      showToast("Processo reaberto com sucesso.", "success");
+    } catch (error) {
+      showToast("Erro ao reabrir processo.", "error");
+      carregarDados();
     }
   };
 
@@ -306,29 +371,123 @@ function ProcessosContent() {
         </button>
       </div>
 
+      {/* ========== ABAS (Ativos / Arquivados) ========== */}
+      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setAbaAtiva("ATIVO")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${abaAtiva === "ATIVO"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+            }`}
+        >
+          <Briefcase size={16} />
+          Ativos
+          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${abaAtiva === "ATIVO" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
+            }`}>
+            {processosAtivos.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setAbaAtiva("ARQUIVADO")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${abaAtiva === "ARQUIVADO"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+            }`}
+        >
+          <Archive size={16} />
+          Arquivados
+          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${abaAtiva === "ARQUIVADO" ? "bg-slate-700 text-white" : "bg-slate-200 text-slate-500"
+            }`}>
+            {processosArquivados.length}
+          </span>
+        </button>
+      </div>
+
       {/* Grid de Cards */}
       {loading ? (
         <div className="flex justify-center p-12"><Loader2 className="animate-spin text-slate-400" /></div>
-      ) : processos.length === 0 ? (
+      ) : processosFiltrados.length === 0 ? (
         <div className="text-center p-12 bg-white rounded-3xl border border-dashed border-slate-200">
-          <Scale className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-900">Nenhum processo ativo</h3>
-          <p className="text-slate-500">Cadastre seu primeiro caso para começar.</p>
+          {abaAtiva === "ATIVO" ? (
+            <>
+              <Scale className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900">Nenhum processo ativo</h3>
+              <p className="text-slate-500">Cadastre seu primeiro caso para começar.</p>
+            </>
+          ) : (
+            <>
+              <Archive className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900">Nenhum processo arquivado</h3>
+              <p className="text-slate-500">Processos concluídos aparecerão aqui.</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {processos.map((proc) => (
+          {processosFiltrados.map((proc) => (
             <ProcessCard
               key={proc.id}
               proc={proc}
               isSyncing={sincronizando[proc.id] || false}
               onDelete={handleDelete}
               onPrioridadeChange={handlePrioridadeChange}
-              onConcluir={handleConcluir}
+              onArquivar={handleAbrirModalArquivamento}
+              onReabrir={handleReabrir}
               onWhatsApp={handleWhatsApp}
               onSincronizar={handleSincronizarCNJ}
             />
           ))}
+        </div>
+      )}
+
+      {/* ========== MODAL DE CONFIRMAÇÃO DE ARQUIVAMENTO ========== */}
+      {arquivamentoModal.aberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Archive size={20} className="text-slate-600" />
+                Arquivar Processo
+              </h3>
+              <button
+                onClick={() => setArquivamentoModal({ aberto: false, processoId: null, resultado: "" })}
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-500 mb-4">
+              Qual foi o resultado deste processo?
+            </p>
+
+            <select
+              value={arquivamentoModal.resultado}
+              onChange={(e) => setArquivamentoModal(prev => ({ ...prev, resultado: e.target.value }))}
+              className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-900 mb-5"
+            >
+              <option value="">Selecione o resultado...</option>
+              {RESULTADOS_OPCOES.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setArquivamentoModal({ aberto: false, processoId: null, resultado: "" })}
+                className="flex-1 py-2.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarArquivamento}
+                disabled={!arquivamentoModal.resultado}
+                className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -444,8 +603,8 @@ function ProcessosContent() {
                     type="button"
                     onClick={() => setFormData({ ...formData, polo: "ATIVO" })}
                     className={`p-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 ${formData.polo === "ATIVO"
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-100"
-                        : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-100"
+                      : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
                       }`}
                   >
                     <div className="text-xs opacity-70 mb-0.5">Polo Ativo</div>
@@ -455,8 +614,8 @@ function ProcessosContent() {
                     type="button"
                     onClick={() => setFormData({ ...formData, polo: "PASSIVO" })}
                     className={`p-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 ${formData.polo === "PASSIVO"
-                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm shadow-amber-100"
-                        : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
+                      ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm shadow-amber-100"
+                      : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
                       }`}
                   >
                     <div className="text-xs opacity-70 mb-0.5">Polo Passivo</div>
@@ -486,8 +645,8 @@ function ProcessosContent() {
                       }));
                     }}
                     className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${isNovoCliente
-                        ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      : "bg-blue-50 text-blue-600 hover:bg-blue-100"
                       }`}
                   >
                     {isNovoCliente ? (
