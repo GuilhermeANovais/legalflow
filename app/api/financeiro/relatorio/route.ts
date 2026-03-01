@@ -80,7 +80,7 @@ export async function POST(req: Request) {
             }
         );
 
-        const saldoMes = totais.totalReceitas - totais.totalDespesas;
+        const saldoMes = totais.totalReceitas - (totais.totalDespesas - totais.totalRepasses);
         const idsTransacoes = transacoesDoMes.map((t) => t.id);
         const agora = new Date();
 
