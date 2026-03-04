@@ -82,11 +82,29 @@ model Processo {
   cliente        Client   @relation(fields: [clienteId], references: [id])
   movimentacoes  Movimentacao[]
   transacoes     Transacao[]
+  historico      ProcessoHistorico[]
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   @@index([tenantId])
+}
+
+model ProcessoHistorico {
+  id         String   @id @default(uuid())
+  processoId String
+  tenantId   String
+  acao       String   // "CRIADO", "EDITADO", "STATUS_ALTERADO", "ARQUIVADO", "REABERTO", etc.
+  descricao  String   
+  valoresAnteriores String? // Json string
+  valoresNovos      String? // Json string
+  createdAt  DateTime @default(now())
+
+  processo   Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
+  
+  @@index([processoId])
+  @@index([tenantId])
+  @@map("processo_historicos")
 }
 
 model Movimentacao {

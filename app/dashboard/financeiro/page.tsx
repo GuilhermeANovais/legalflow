@@ -22,7 +22,11 @@ import {
     Banknote,
     ChevronDown,
     ChevronRight,
+    Pencil,
+    Trash2,
+    Loader2
 } from "lucide-react";
+import { ToastProvider, useToast } from "../components/toast";
 
 // === TIPOS ===
 
@@ -109,7 +113,8 @@ const statusBadge: Record<string, { label: string; color: string }> = {
 
 // === COMPONENTE PRINCIPAL ===
 
-export default function FinanceiroPage() {
+function FinanceiroContent() {
+    const { showToast } = useToast();
     const [transacoes, setTransacoes] = useState<Transacao[]>([]);
     const [processos, setProcessos] = useState<Processo[]>([]);
     const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -121,6 +126,11 @@ export default function FinanceiroPage() {
     const [filtroStatus, setFiltroStatus] = useState<string>("TODOS");
     const [filtroCategoria, setFiltroCategoria] = useState<string>("TODOS");
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+    // Estados para edição/exclusão
+    const [editingTransacao, setEditingTransacao] = useState<Transacao | null>(null);
+    const [deletingTransacao, setDeletingTransacao] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Buscar dados
     const fetchData = async () => {
@@ -274,9 +284,33 @@ export default function FinanceiroPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id }),
             });
+            showToast("Mensalidade paga com sucesso", "success");
             fetchData();
         } catch (error) {
             console.error("Erro ao marcar como pago:", error);
+            showToast("Erro ao processar", "error");
+        }
+    };
+
+    // Excluir transação
+    const handleConfirmDelete = async () => {
+        if (!deletingTransacao) return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`/api/financeiro/${deletingTransacao}`, {
+                method: "DELETE",
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Erro ao excluir transação");
+            }
+            showToast("Transação excluída com sucesso!", "success");
+            setDeletingTransacao(null);
+            fetchData();
+        } catch (error: any) {
+            showToast(error.message || "Erro ao excluir", "error");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -444,7 +478,7 @@ export default function FinanceiroPage() {
                                         const st = statusBadge[t.status];
                                         const CatIcon = cat.icon;
                                         return (
-                                            <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                                            <tr key={t.id} className="group hover:bg-slate-50 transition-colors">
                                                 <td className="px-4 py-3 text-sm text-slate-600">
                                                     {formatDate(t.dataVencimento)}
                                                 </td>
@@ -484,17 +518,25 @@ export default function FinanceiroPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    {t.status === "PENDENTE" ? (
-                                                        <button
-                                                            onClick={() => marcarComoPago(t.id)}
-                                                            className="text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 p-1.5 rounded-lg transition-colors"
-                                                            title="Marcar como pago"
-                                                        >
-                                                            <Check className="h-4 w-4" />
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        {t.status === "PENDENTE" ? (
+                                                            <button
+                                                                onClick={() => marcarComoPago(t.id)}
+                                                                className="text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 p-1.5 rounded-lg transition-colors"
+                                                                title="Marcar como pago"
+                                                            >
+                                                                <Check className="h-4 w-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-zinc-300 text-xs px-1.5 pt-1">✓</span>
+                                                        )}
+                                                        <button onClick={() => setEditingTransacao(t)} className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Editar">
+                                                            <Pencil className="h-4 w-4" />
                                                         </button>
-                                                    ) : (
-                                                        <span className="text-slate-300 text-xs">✓</span>
-                                                    )}
+                                                        <button onClick={() => setDeletingTransacao(t.id)} className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
@@ -564,7 +606,7 @@ export default function FinanceiroPage() {
                                             {isExpanded && row.items.map((t) => {
                                                 const subSt = statusBadge[t.status];
                                                 return (
-                                                    <tr key={t.id} className="bg-slate-50/50 hover:bg-slate-100/50 transition-colors border-l-4 border-l-violet-200">
+                                                    <tr key={t.id} className="group bg-slate-50/50 hover:bg-slate-100/50 transition-colors border-l-4 border-l-violet-200">
                                                         <td className="px-4 py-2.5 text-xs text-slate-500 pl-6">
                                                             {formatDate(t.dataVencimento)}
                                                         </td>
@@ -574,7 +616,7 @@ export default function FinanceiroPage() {
                                                                 <span className="truncate max-w-[200px]">{t.descricao.replace(row.baseDescricao, '').replace(/^ — /, '')}</span>
                                                             </div>
                                                         </td>
-                                                        <td colSpan={2}></td> {/* Pula processo e categoria pra não repetir */}
+                                                        <td colSpan={2}>{/* Pula processo e categoria pra não repetir */}</td>
                                                         <td className={`px-4 py-2.5 text-xs font-semibold text-right ${t.tipo === "RECEITA" ? "text-emerald-600" : "text-red-600"}`}>
                                                             {formatCurrency(t.valor)}
                                                         </td>
@@ -584,20 +626,28 @@ export default function FinanceiroPage() {
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-2.5 text-center">
-                                                            {t.status === "PENDENTE" ? (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        marcarComoPago(t.id);
-                                                                    }}
-                                                                    className="text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 p-1 rounded transition-colors"
-                                                                    title="Marcar como pago"
-                                                                >
-                                                                    <Check className="h-3.5 w-3.5" />
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                {t.status === "PENDENTE" ? (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            marcarComoPago(t.id);
+                                                                        }}
+                                                                        className="text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 p-1 rounded transition-colors"
+                                                                        title="Marcar como pago"
+                                                                    >
+                                                                        <Check className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="text-slate-300 text-xs px-1 pt-0.5">✓</span>
+                                                                )}
+                                                                <button onClick={(e) => { e.stopPropagation(); setEditingTransacao(t); }} className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded transition-all" title="Editar">
+                                                                    <Pencil className="h-3.5 w-3.5" />
                                                                 </button>
-                                                            ) : (
-                                                                <span className="text-slate-300 text-xs">✓</span>
-                                                            )}
+                                                                <button onClick={(e) => { e.stopPropagation(); setDeletingTransacao(t.id); }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded transition-all" title="Apagar">
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 );
@@ -690,6 +740,64 @@ export default function FinanceiroPage() {
                                 </div>
                             );
                         })}
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Editar Transação */}
+            {editingTransacao && (
+                <EditarTransacaoModal
+                    transacao={editingTransacao}
+                    processos={processos}
+                    clientes={clientes}
+                    onClose={() => setEditingTransacao(null)}
+                    onSuccess={() => {
+                        showToast("Transação atualizada com sucesso!", "success");
+                        setEditingTransacao(null);
+                        fetchData();
+                    }}
+                />
+            )}
+
+            {/* AlertDialog de Exclusão */}
+            {deletingTransacao && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex gap-4 items-start">
+                            <div className="p-3 bg-red-100 text-red-600 rounded-full shrink-0">
+                                <AlertTriangle className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 mb-1">
+                                    Excluir Transação?
+                                </h3>
+                                <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+                                    Tem certeza que deseja apagar esta transação? Essa ação recalculará os saldos e o fechamento. Esta ação <strong>não pode ser desfeita.</strong>
+                                </p>
+                                <div className="flex gap-3 justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeletingTransacao(null)}
+                                        disabled={isDeleting}
+                                        className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleConfirmDelete}
+                                        disabled={isDeleting}
+                                        className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
+                                    >
+                                        {isDeleting ? (
+                                            <><Loader2 className="w-4 h-4 animate-spin" /> Excluindo...</>
+                                        ) : (
+                                            <><Trash2 className="w-4 h-4" /> Sim, excluir</>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -813,6 +921,205 @@ function NovaTransacaoModal({
                     {tab === "exito" && (
                         <TabExito processos={processos} onSuccess={onSuccess} />
                     )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// === MODAL DE EDIÇÃO DE TRANSAÇÃO ===
+
+function EditarTransacaoModal({
+    transacao,
+    processos,
+    clientes,
+    onClose,
+    onSuccess,
+}: {
+    transacao: Transacao;
+    processos: Processo[];
+    clientes: Cliente[];
+    onClose: () => void;
+    onSuccess: () => void;
+}) {
+    const [tipo, setTipo] = useState<"RECEITA" | "DESPESA">(transacao.tipo);
+    const [categoria, setCategoria] = useState(transacao.categoria);
+    const [valor, setValor] = useState(
+        transacao.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    );
+    const [descricao, setDescricao] = useState(transacao.descricao);
+    const [dataVencimento, setDataVencimento] = useState(transacao.dataVencimento ? transacao.dataVencimento.split("T")[0] : "");
+    const [dataPagamento, setDataPagamento] = useState(transacao.dataPagamento ? transacao.dataPagamento.split("T")[0] : "");
+    const [status, setStatus] = useState(transacao.status);
+    const [processoId, setProcessoId] = useState(transacao.processoId || "");
+    const [clienteId, setClienteId] = useState(transacao.clienteId || "");
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleValorChange = (raw: string) => {
+        const digits = raw.replace(/\D/g, "");
+        if (!digits) { setValor(""); return; }
+        const val = parseInt(digits, 10) / 100;
+        setValor(val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    };
+
+    const handleSubmit = async () => {
+        setError("");
+        if (!valor || !descricao || !dataVencimento) {
+            setError("Preencha os campos obrigatórios");
+            return;
+        }
+        const valorNumerico = parseFloat(valor.replace(/\./g, "").replace(",", "."));
+        if (valorNumerico <= 0) { setError("Valor deve ser maior que zero"); return; }
+
+        setSubmitting(true);
+        try {
+            const res = await fetch(`/api/financeiro/${transacao.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tipo,
+                    categoria,
+                    valor: valorNumerico,
+                    descricao,
+                    dataVencimento,
+                    dataPagamento: status === "PAGO" ? (dataPagamento || new Date().toISOString().split("T")[0]) : null,
+                    status,
+                    processoId: processoId || null,
+                    clienteId: clienteId || null,
+                }),
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                // try parse JSON for error message
+                let msg = text;
+                try {
+                    const j = JSON.parse(text);
+                    if (j.error) msg = j.error;
+                } catch { /* empty */ }
+                setError(msg);
+                return;
+            }
+            onSuccess();
+        } catch { setError("Erro de conexão"); } finally { setSubmitting(false); }
+    };
+
+    const processosAtivos = useMemo(() => processos.filter((p) => p.status !== "ARQUIVADO"), [processos]);
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl animate-fade-up max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between p-6 border-b border-slate-100 flex-shrink-0">
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-900">Editar Transação</h2>
+                        <p className="text-sm text-slate-500 mt-0.5">Altere os dados do registro financeiro</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div className="overflow-y-auto flex-1 p-6 space-y-4">
+                    {/* Tipo e Status */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Tipo</label>
+                            <select value={tipo} onChange={(e) => setTipo(e.target.value as any)} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                <option value="RECEITA">Receita</option>
+                                <option value="DESPESA">Despesa</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
+                            <select value={status} onChange={(e) => setStatus(e.target.value as any)} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                <option value="PENDENTE">Pendente</option>
+                                <option value="PAGO">Pago</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Categoria */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Categoria</label>
+                        <select value={categoria} onChange={(e) => setCategoria(e.target.value as any)} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                            <option value="HONORARIOS">Honorários</option>
+                            <option value="CUSTAS">Custas</option>
+                            <option value="OPERACIONAL_ESCRITORIO">Operacional do Escritório</option>
+                            <option value="REPASSE_CLIENTE">Repasse ao Cliente</option>
+                        </select>
+                    </div>
+
+                    {/* Valor & Descricao */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Valor (R$)</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">R$</span>
+                                <input type="text" value={valor} onChange={(e) => handleValorChange(e.target.value)} placeholder="0,00" className="w-full border border-slate-200 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Descrição</label>
+                            <input type="text" value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Breve descrição" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        </div>
+                    </div>
+
+                    {/* Datas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Data de Vencimento</label>
+                            <input type="date" value={dataVencimento} onChange={(e) => setDataVencimento(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                        </div>
+                        {status === "PAGO" && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Data de Pagamento</label>
+                                <input type="date" value={dataPagamento} onChange={(e) => setDataPagamento(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Processo e Cliente */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Processo (opcional)</label>
+                            <select value={processoId} onChange={(e) => setProcessoId(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                <option value="">Nenhum</option>
+                                {processosAtivos.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.numero} — {p.titulo}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Cliente (opcional)</label>
+                            <select value={clienteId} onChange={(e) => setClienteId(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                <option value="">Nenhum</option>
+                                {clientes.map((c) => (
+                                    <option key={c.id} value={c.id}>{c.nome}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Error */}
+                    {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+                </div>
+
+                <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50 flex-shrink-0 rounded-b-2xl">
+                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors">
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={submitting || !valor || !descricao || !dataVencimento}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                    >
+                        {submitting ? (
+                            <><Loader2 className="h-4 w-4 animate-spin" /> Salvando...</>
+                        ) : (
+                            <><Check className="h-4 w-4" /> Salvar Alterações</>
+                        )}
+                    </button>
                 </div>
             </div>
         </div>
@@ -1472,5 +1779,13 @@ function FechamentoMensalModal({
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function FinanceiroPage() {
+    return (
+        <ToastProvider>
+            <FinanceiroContent />
+        </ToastProvider>
     );
 }
