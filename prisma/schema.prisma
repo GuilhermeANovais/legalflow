@@ -133,6 +133,9 @@ model Transacao {
   descricao      String
   dataVencimento DateTime
   dataPagamento  DateTime?
+  parcelaAtual   Int?
+  totalParcelas  Int?
+  isFixa         Boolean            @default(false)
 
   processoId     String?
   processo       Processo?          @relation(fields: [processoId], references: [id])
