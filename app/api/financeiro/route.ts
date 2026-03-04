@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
         const body = await req.json();
-        const { tipo, categoria, valor, descricao, dataVencimento, processoId, clienteId } = body;
+        const { tipo, categoria, valor, descricao, dataVencimento, processoId, clienteId, isFixa } = body;
 
         if (!tipo || !categoria || !valor || !descricao) {
             return new NextResponse("Campos obrigatórios: tipo, categoria, valor, descricao", { status: 400 });
@@ -64,6 +64,7 @@ export async function POST(req: Request) {
                 dataVencimento: dataVencimento ? new Date(dataVencimento) : new Date(),
                 processoId: processoId || null,
                 clienteId: clienteId || null,
+                isFixa: isFixa || false,
             },
         });
 

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
 import { LayoutDashboard, Users, Gavel, FileText, Settings, Menu, LogOut } from "lucide-react"; // <--- Importou Settings?
+import Image from "next/image";
+import logoPic from "@/app/logo_legalflow.svg";
 import { db } from "@/lib/db";
 import { UserButton } from "@clerk/nextjs";
 
@@ -46,8 +48,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 z-50 bg-slate-950 text-white">
         <div className="h-16 flex items-center px-6 border-b border-slate-800 font-bold text-xl tracking-tight">
-          <Gavel className="mr-2 text-blue-500" />
-          Legal<span className="text-blue-500">Flow</span>
+          <Image src={logoPic} alt="LegalFlow Logo" className="h-8 w-auto" />
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">
