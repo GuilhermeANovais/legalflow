@@ -22,6 +22,10 @@ const config: Config = {
         display: ["var(--font-display)", "var(--font-body)", "system-ui", "sans-serif"],
       },
       colors: {
+        "mint-whisper": "#D1F2EB",
+        "emerald-green": "#50C878",
+        "royal-amethist": "#0B6E4F",
+        "dark-evergreen": "#013220",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
