@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Plus, Scale, Loader2, Wand2, X,
   Calendar, RefreshCw, UserPlus, Users, Shield,
-  Archive, Briefcase
+  Archive, Briefcase, AlertTriangle, Pencil, Trash2
 } from "lucide-react";
 import { buscarDadosCNJ } from "@/app/actions";
 import { ToastProvider, useToast } from "@/app/dashboard/components/toast";
@@ -22,6 +22,13 @@ interface Movimentacao {
   codigo: number;
   nome: string;
   dataHora: string;
+}
+
+interface ProcessoHistorico {
+  id: string;
+  acao: string;
+  descricao: string;
+  createdAt: string;
 }
 
 interface Processo {
@@ -47,6 +54,7 @@ interface Processo {
   dataAjuizamento?: string | null;
   sincronizadoEm?: string | null;
   movimentacoes?: Movimentacao[];
+  historico?: ProcessoHistorico[];
 }
 
 const RESULTADOS_OPCOES = [
@@ -65,6 +73,19 @@ function ProcessosContent() {
   const [buscandoCNJ, setBuscandoCNJ] = useState(false);
   const [sincronizando, setSincronizando] = useState<Record<string, boolean>>({});
   const [isNovoCliente, setIsNovoCliente] = useState(false);
+
+  // --- Estado de edição ---
+  const [editingProcesso, setEditingProcesso] = useState<Processo | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    titulo: "", numero: "", area: "", fase: "",
+    prioridade: "", valorCausa: "", dataPrazo: "",
+    polo: "ATIVO", clienteId: "",
+  });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // --- Estado do AlertDialog de exclusão ---
+  const [deletingProcesso, setDeletingProcesso] = useState<Processo | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // --- Estado das abas ---
   const [abaAtiva, setAbaAtiva] = useState<"ATIVO" | "ARQUIVADO">("ATIVO");
@@ -129,18 +150,69 @@ function ProcessosContent() {
 
   // --- AÇÕES DO USUÁRIO ---
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  // Abrir AlertDialog de exclusão
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Tem certeza que deseja excluir este processo? Essa ação é irreversível.")) return;
+    const proc = processos.find(p => p.id === id);
+    if (proc) setDeletingProcesso(proc);
+  };
 
-    setProcessos(prev => prev.filter(p => p.id !== id));
+  // Confirmar exclusão
+  const handleConfirmDelete = async () => {
+    if (!deletingProcesso) return;
+    setDeleteLoading(true);
+
+    setProcessos(prev => prev.filter(p => p.id !== deletingProcesso.id));
 
     try {
-      await fetch(`/api/processos?id=${id}`, { method: "DELETE" });
+      await fetch(`/api/processos/${deletingProcesso.id}`, { method: "DELETE" });
       showToast("Processo excluído com sucesso.", "success");
-    } catch (error) {
+    } catch {
       showToast("Erro ao excluir no servidor.", "error");
       carregarDados();
+    } finally {
+      setDeletingProcesso(null);
+      setDeleteLoading(false);
+    }
+  };
+
+  // Abrir modal de edição
+  const handleOpenEdit = (proc: Processo) => {
+    setEditingProcesso(proc);
+    setEditFormData({
+      titulo: proc.titulo,
+      numero: proc.numero,
+      area: proc.area,
+      fase: proc.fase,
+      prioridade: proc.prioridade,
+      valorCausa: proc.valorCausa?.toString() || "",
+      dataPrazo: proc.dataPrazo ? proc.dataPrazo.split("T")[0] : "",
+      polo: proc.polo || "ATIVO",
+      clienteId: proc.clienteId,
+    });
+  };
+
+  // Submeter edição
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProcesso) return;
+    setEditSubmitting(true);
+
+    try {
+      const res = await fetch(`/api/processos/${editingProcesso.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFormData),
+      });
+      if (!res.ok) throw new Error();
+
+      showToast("Processo atualizado com sucesso!", "success");
+      setEditingProcesso(null);
+      carregarDados();
+    } catch {
+      showToast("Erro ao atualizar processo.", "error");
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -376,8 +448,8 @@ function ProcessosContent() {
         <button
           onClick={() => setAbaAtiva("ATIVO")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${abaAtiva === "ATIVO"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+            ? "bg-white text-slate-900 shadow-sm"
+            : "text-slate-500 hover:text-slate-700"
             }`}
         >
           <Briefcase size={16} />
@@ -390,8 +462,8 @@ function ProcessosContent() {
         <button
           onClick={() => setAbaAtiva("ARQUIVADO")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${abaAtiva === "ARQUIVADO"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+            ? "bg-white text-slate-900 shadow-sm"
+            : "text-slate-500 hover:text-slate-700"
             }`}
         >
           <Archive size={16} />
@@ -429,7 +501,8 @@ function ProcessosContent() {
               key={proc.id}
               proc={proc}
               isSyncing={sincronizando[proc.id] || false}
-              onDelete={handleDelete}
+              onEdit={handleOpenEdit}
+              onDelete={handleDeleteClick}
               onPrioridadeChange={handlePrioridadeChange}
               onArquivar={handleAbrirModalArquivamento}
               onReabrir={handleReabrir}
@@ -755,6 +828,139 @@ function ProcessosContent() {
                 <button type="submit" className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200">Salvar Processo</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========== MODAL DE EDIÇÃO DE PROCESSO ========== */}
+      {editingProcesso && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold">Editar Processo</h3>
+              <button onClick={() => setEditingProcesso(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="text-sm font-bold text-slate-700">Título da Ação</label>
+                <input required className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  value={editFormData.titulo} onChange={e => setEditFormData({ ...editFormData, titulo: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-bold text-slate-700">Número do Processo (CNJ)</label>
+                <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  value={editFormData.numero} onChange={e => setEditFormData({ ...editFormData, numero: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-bold text-slate-700">Polo de Atuação</label>
+                <div className="grid grid-cols-2 gap-3 mt-1.5">
+                  <button type="button" onClick={() => setEditFormData({ ...editFormData, polo: "ATIVO" })}
+                    className={`p-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 ${editFormData.polo === "ATIVO" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"
+                      }`}>
+                    <div className="text-xs opacity-70 mb-0.5">Polo Ativo</div>Autor / Exequente
+                  </button>
+                  <button type="button" onClick={() => setEditFormData({ ...editFormData, polo: "PASSIVO" })}
+                    className={`p-3 rounded-xl border-2 text-sm font-bold transition-all duration-200 ${editFormData.polo === "PASSIVO" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-slate-200 bg-slate-50 text-slate-500"
+                      }`}>
+                    <div className="text-xs opacity-70 mb-0.5">Polo Passivo</div>Réu / Executado
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-bold text-slate-700">Cliente</label>
+                <select required className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  value={editFormData.clienteId} onChange={e => setEditFormData({ ...editFormData, clienteId: e.target.value })}>
+                  <option value="">Selecione um cliente...</option>
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-bold text-slate-700">Próximo Prazo</label>
+                  <input type="date" className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    value={editFormData.dataPrazo} onChange={e => setEditFormData({ ...editFormData, dataPrazo: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-slate-700">Prioridade</label>
+                  <select className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    value={editFormData.prioridade} onChange={e => setEditFormData({ ...editFormData, prioridade: e.target.value })}>
+                    <option>Normal</option><option>Alta</option><option>Urgente</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-bold text-slate-700">Valor da Causa (R$)</label>
+                  <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    type="number" step="0.01"
+                    value={editFormData.valorCausa} onChange={e => setEditFormData({ ...editFormData, valorCausa: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-slate-700">Área</label>
+                  <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    value={editFormData.area} onChange={e => setEditFormData({ ...editFormData, area: e.target.value })} />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-bold text-slate-700">Fase Atual</label>
+                <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  value={editFormData.fase} onChange={e => setEditFormData({ ...editFormData, fase: e.target.value })} />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setEditingProcesso(null)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">Cancelar</button>
+                <button type="submit" disabled={editSubmitting}
+                  className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200 flex items-center justify-center gap-2 disabled:opacity-50">
+                  {editSubmitting && <Loader2 className="animate-spin" size={16} />}
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========== ALERT DIALOG DE EXCLUSÃO ========== */}
+      {deletingProcesso && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-100 rounded-xl">
+                <AlertTriangle size={24} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Confirmar Exclusão</h3>
+                <p className="text-xs text-slate-500">Esta ação é irreversível</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-600 mb-2">
+              Tem a certeza que deseja excluir o processo <strong>&quot;{deletingProcesso.titulo}&quot;</strong>?
+            </p>
+            <p className="text-xs text-red-500 font-medium mb-6">
+              ⚠️ As transações financeiras e movimentações associadas também serão removidas.
+            </p>
+
+            <div className="flex gap-3">
+              <button onClick={() => setDeletingProcesso(null)} disabled={deleteLoading}
+                className="flex-1 py-2.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors text-sm">Cancelar</button>
+              <button onClick={handleConfirmDelete} disabled={deleteLoading}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+                {deleteLoading && <Loader2 className="animate-spin" size={14} />}
+                Apagar Processo
+              </button>
+            </div>
           </div>
         </div>
       )}

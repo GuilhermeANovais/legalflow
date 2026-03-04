@@ -4,7 +4,7 @@ import {
     Scale, X, CheckCircle2, Calendar,
     MessageCircle, AlertTriangle, Clock, RefreshCw,
     Gavel, MapPin, FileText, Monitor, ChevronDown,
-    Sparkles, Loader2, UserCheck, Brain, RotateCcw
+    Sparkles, Loader2, UserCheck, Brain, RotateCcw, Pencil
 } from "lucide-react";
 import { format, isBefore, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -23,6 +23,13 @@ interface Movimentacao {
     codigo: number;
     nome: string;
     dataHora: string;
+}
+
+interface ProcessoHistorico {
+    id: string;
+    acao: string;
+    descricao: string;
+    createdAt: string;
 }
 
 interface Processo {
@@ -47,11 +54,13 @@ interface Processo {
     dataAjuizamento?: string | null;
     sincronizadoEm?: string | null;
     movimentacoes?: Movimentacao[];
+    historico?: ProcessoHistorico[];
 }
 
 interface ProcessCardProps {
     proc: Processo;
     isSyncing: boolean;
+    onEdit: (proc: Processo) => void;
     onDelete: (id: string, e: React.MouseEvent) => void;
     onPrioridadeChange: (id: string, novaPrioridade: string) => void;
     onArquivar: (id: string) => void;
@@ -79,10 +88,11 @@ function getPrazoStatus(data: string | null): string {
 }
 
 export default function ProcessCard({
-    proc, isSyncing, onDelete, onPrioridadeChange,
+    proc, isSyncing, onEdit, onDelete, onPrioridadeChange,
     onArquivar, onReabrir, onWhatsApp, onSincronizar
 }: ProcessCardProps) {
     const [expanded, setExpanded] = useState(false);
+    const [historicoExpanded, setHistoricoExpanded] = useState(false);
     const statusPrazo = getPrazoStatus(proc.dataPrazo);
     const isArquivado = proc.status === "ARQUIVADO";
     const hasCnjData = !!(proc.tribunal || proc.classeProcessual);
@@ -158,6 +168,14 @@ export default function ProcessCard({
                     <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         {!isArquivado ? (
                             <>
+                                {/* Botão Editar */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onEdit(proc); }}
+                                    className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Editar Processo"
+                                >
+                                    <Pencil size={14} />
+                                </button>
                                 {/* Botão IA */}
                                 <button
                                     onClick={() => setIaAberto(!iaAberto)}
@@ -311,6 +329,55 @@ export default function ProcessCard({
                                     </p>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ========== HISTÓRICO DE ALTERAÇÕES ========== */}
+            {proc.historico && proc.historico.length > 0 && (
+                <div className="px-5 pb-1">
+                    <button
+                        onClick={() => setHistoricoExpanded(!historicoExpanded)}
+                        className="w-full flex items-center justify-between text-[10px] uppercase font-bold text-slate-400 tracking-wider hover:text-slate-600 transition-colors py-1.5"
+                    >
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Histórico do Sistema
+                        </span>
+                        <ChevronDown
+                            size={12}
+                            className={`transition-transform duration-200 ${historicoExpanded ? "rotate-180" : ""}`}
+                        />
+                    </button>
+
+                    <div
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${historicoExpanded ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
+                            }`}
+                    >
+                        <div className="relative pl-4 pb-3 space-y-2.5 overflow-y-auto max-h-40 scrollbar-thin scrollbar-thumb-slate-200">
+                            {/* Linha vertical da timeline */}
+                            <div className="absolute left-[5px] top-1 bottom-3 w-px bg-gradient-to-b from-emerald-300 via-slate-200 to-transparent" />
+
+                            {proc.historico.map((hist, idx) => (
+                                <div key={hist.id} className="relative flex gap-3">
+                                    {/* Dot da timeline */}
+                                    <div
+                                        className={`absolute -left-4 top-1 w-2.5 h-2.5 rounded-full border-2 ${idx === 0
+                                            ? "bg-emerald-500 border-emerald-300 shadow-[0_0_6px_rgba(16,185,129,0.4)]"
+                                            : "bg-white border-slate-300"
+                                            }`}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[11px] font-semibold text-slate-700 leading-snug line-clamp-2">
+                                            {hist.descricao}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">
+                                            {format(new Date(hist.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

@@ -14,6 +14,7 @@ export async function GET(req: Request) {
       where: { tenantId: userId },
       include: {
         cliente: true,
+        historico: { orderBy: { createdAt: "desc" } },
         movimentacoes: {
           orderBy: { dataHora: 'desc' },
           take: 5,
@@ -102,12 +103,23 @@ export async function POST(req: Request) {
         finalClienteId = clienteCriado.id;
       }
 
-      return tx.processo.create({
+      const processoCriado = await tx.processo.create({
         data: {
           ...processoData,
           clienteId: finalClienteId,
         },
       });
+
+      await tx.processoHistorico.create({
+        data: {
+          processoId: processoCriado.id,
+          tenantId: userId,
+          acao: "CRIADO",
+          descricao: "Processo cadastrado no sistema."
+        }
+      });
+
+      return processoCriado;
     });
 
     return NextResponse.json(processo);
@@ -128,14 +140,26 @@ export async function PATCH(req: Request) {
 
     if (!id) return new NextResponse("ID é obrigatório", { status: 400 });
 
-    // Monta o objeto de dados condicionalmente
-    const data: Record<string, unknown> = {};
+    const processoAnterior = await db.processo.findUnique({
+      where: { id, tenantId: userId }
+    });
 
-    if (prioridade !== undefined) {
-      data.prioridade = prioridade;
+    if (!processoAnterior) {
+      return new NextResponse("Processo não encontrado", { status: 404 });
     }
 
-    if (status === "ARQUIVADO") {
+    // Monta o objeto de dados condicionalmente
+    const data: Record<string, unknown> = {};
+    let acaoHistorico = "EDITADO";
+    let descricaoHistorico = "";
+
+    if (prioridade !== undefined && prioridade !== processoAnterior.prioridade) {
+      data.prioridade = prioridade;
+      acaoHistorico = "PRIORIDADE_ALTERADA";
+      descricaoHistorico = `Prioridade alterada de ${processoAnterior.prioridade} para ${prioridade}`;
+    }
+
+    if (status === "ARQUIVADO" && processoAnterior.status !== "ARQUIVADO") {
       // Arquivar: exige resultado e registra data
       if (!resultado) {
         return new NextResponse("Resultado é obrigatório para arquivar.", { status: 400 });
@@ -143,19 +167,41 @@ export async function PATCH(req: Request) {
       data.status = "ARQUIVADO";
       data.resultado = resultado;
       data.arquivadoEm = new Date();
-    } else if (status === "ATIVO") {
+      acaoHistorico = "ARQUIVADO";
+      descricaoHistorico = `Processo arquivado. Motivo: ${resultado}`;
+    } else if (status === "ATIVO" && processoAnterior.status !== "ATIVO") {
       // Desarquivar: limpa resultado e data de arquivamento
       data.status = "ATIVO";
       data.resultado = null;
       data.arquivadoEm = null;
+      acaoHistorico = "REABERTO";
+      descricaoHistorico = `Processo reaberto. Motivo anterior (${processoAnterior.resultado}) foi apagado.`;
     }
 
-    const processoAtualizado = await db.processo.update({
-      where: {
-        id,
-        tenantId: userId
-      },
-      data
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json(processoAnterior); // Nenhuma alteração necessária
+    }
+
+    const processoAtualizado = await db.$transaction(async (tx) => {
+      const atualizado = await tx.processo.update({
+        where: { id, tenantId: userId },
+        data
+      });
+
+      if (descricaoHistorico) {
+        await tx.processoHistorico.create({
+          data: {
+            processoId: id,
+            tenantId: userId,
+            acao: acaoHistorico,
+            descricao: descricaoHistorico,
+            valoresAnteriores: JSON.stringify(processoAnterior),
+            valoresNovos: JSON.stringify(atualizado),
+          }
+        });
+      }
+
+      return atualizado;
     });
 
     return NextResponse.json(processoAtualizado);
