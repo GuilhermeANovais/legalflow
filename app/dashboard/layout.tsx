@@ -5,7 +5,7 @@ import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
 import { LayoutDashboard, Users, Gavel, FileText, Settings, Menu, LogOut } from "lucide-react"; // <--- Importou Settings?
 import Image from "next/image";
-import logoPic from "@/app/logo_legalflow.svg";
+import logoPic from "@/app/hor_legalflow.svg";
 import { db } from "@/lib/db";
 import { UserButton } from "@clerk/nextjs";
 
@@ -44,10 +44,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-neutral-50 flex">
       {/* Sidebar Desktop */}
-      <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 z-50 bg-slate-950 text-white">
-        <div className="h-16 flex items-center px-6 border-b border-slate-800 font-bold text-xl tracking-tight">
+      <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 z-50 bg-neutral-950 text-white">
+        <div className="h-16 flex items-center px-6 border-b border-neutral-800 font-bold text-xl tracking-tight">
           <Image src={logoPic} alt="LegalFlow Logo" className="h-8 w-auto" />
         </div>
 
@@ -56,7 +56,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium"
+              className="flex items-center gap-3 px-4 py-3 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors text-sm font-medium"
             >
               <item.icon className="h-5 w-5" />
               {item.label}
@@ -64,10 +64,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+        <div className="p-4 border-t border-neutral-800 bg-neutral-900/50">
           <div className="flex items-center gap-3">
             <UserButton afterSignOutUrl="/" />
-            <div className="text-xs text-slate-400 overflow-hidden">
+            <div className="text-xs text-neutral-400 overflow-hidden">
               <p className="font-medium text-white truncate">{user.firstName}</p>
               <p className="truncate opacity-70">Advogado</p>
             </div>
@@ -77,10 +77,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
       {/* Conteúdo Principal */}
       <main className="flex-1 md:ml-64 transition-all">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-8 sticky top-0 z-40">
+        <header className="h-16 bg-white border-b border-neutral-200 flex items-center justify-between px-6 md:px-8 sticky top-0 z-40">
           <div className="flex items-center gap-4">
             {/* Mostra o nome do escritório vindo do banco */}
-            <h1 className="text-lg font-semibold text-slate-800">{escritorio.nome}</h1>
+            <h1 className="text-lg font-semibold text-neutral-800">{escritorio.nome}</h1>
           </div>
         </header>
 
