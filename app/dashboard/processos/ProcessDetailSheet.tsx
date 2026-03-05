@@ -10,6 +10,7 @@ import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { consultarIA } from "@/app/actions";
 import { DocumentUploader, DocumentInfo } from "@/app/dashboard/components/DocumentUploader";
+import { PrazoTab } from "./components/PrazoTab";
 
 import {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -433,7 +434,7 @@ export default function ProcessDetailSheet({
                 {/* Tabs */}
                 <div className="px-6 py-4">
                     <Tabs defaultValue="resumo">
-                        <TabsList className="w-full grid grid-cols-3 mb-4">
+                        <TabsList className="w-full grid border-b border-slate-100 flex overflow-x-auto no-scrollbar scroll-smooth" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
                             <TabsTrigger value="resumo" className="text-xs font-bold">
                                 Resumo
                             </TabsTrigger>
@@ -442,6 +443,9 @@ export default function ProcessDetailSheet({
                             </TabsTrigger>
                             <TabsTrigger value="documentos" className="text-xs font-bold">
                                 Documentos
+                            </TabsTrigger>
+                            <TabsTrigger value="prazos" className="text-xs font-bold">
+                                Prazos
                             </TabsTrigger>
                         </TabsList>
 
@@ -455,6 +459,10 @@ export default function ProcessDetailSheet({
 
                         <TabsContent value="documentos">
                             <TabDocumentos proc={processo} />
+                        </TabsContent>
+
+                        <TabsContent value="prazos">
+                            <PrazoTab processoId={processo.id} movimentacoes={processo.movimentacoes} />
                         </TabsContent>
                     </Tabs>
                 </div>
