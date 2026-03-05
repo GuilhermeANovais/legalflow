@@ -12,6 +12,11 @@ export async function GET(req: Request) {
 
     const clientes = await db.client.findMany({
       where: { tenantId: userId },
+      include: {
+        documentos: {
+          orderBy: { criadoEm: 'desc' },
+        },
+      },
       orderBy: { createdAt: 'desc' }
     });
 
