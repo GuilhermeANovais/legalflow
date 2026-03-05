@@ -85,6 +85,7 @@ model Processo {
   transacoes    Transacao[]
   historico     ProcessoHistorico[]
   documentos    Documento[]
+  prazos        Prazo[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -216,4 +217,27 @@ model Documento {
   @@index([clienteId])
   @@index([processoId])
   @@map("documentos")
+}
+
+model Prazo {
+  id             String    @id @default(uuid())
+  tenantId       String
+  titulo         String
+  descricao      String?
+  dataVencimento DateTime
+  concluido      Boolean   @default(false)
+  dataConclusao  DateTime?
+  
+  processoId     String
+  processo       Processo  @relation(fields: [processoId], references: [id], onDelete: Cascade)
+  
+  usuarioId      String?   
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([processoId])
+  @@index([usuarioId])
+  @@map("prazos")
 }
