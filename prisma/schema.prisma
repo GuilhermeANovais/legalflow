@@ -21,7 +21,7 @@ model Client {
   tenantId         String
   nome             String
   tipo             String   @default("PF") // PF ou PJ
-  documento        String   // CPF ou CNPJ
+  documento        String // CPF ou CNPJ
   email            String?
   telefone         String?
   endereco         String?
@@ -30,8 +30,9 @@ model Client {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  processos        Processo[]
-  transacoes       Transacao[]
+  processos  Processo[]
+  transacoes Transacao[]
+  documentos Documento[]
 
   @@index([tenantId])
 }
@@ -48,60 +49,61 @@ enum Prioridade {
 }
 
 model Processo {
-  id             String   @id @default(uuid())
+  id             String  @id @default(uuid())
   tenantId       String
-  numero         String   
-  titulo         String   
-  area           String   @default("Cível") 
-  fase           String   @default("Conhecimento") 
-  prioridade     String   @default("MEDIA") 
-  valorCausa     Float    @default(0)
+  numero         String
+  titulo         String
+  area           String  @default("Cível")
+  fase           String  @default("Conhecimento")
+  prioridade     String  @default("MEDIA")
+  valorCausa     Float   @default(0)
   parteContraria String?
-  polo           String   @default("ATIVO") // ATIVO (Autor/Exequente) ou PASSIVO (Réu/Executado)
-  
+  polo           String  @default("ATIVO") // ATIVO (Autor/Exequente) ou PASSIVO (Réu/Executado)
+
   // --- CAMPOS DO SISTEMA ---
-  dataPrazo      DateTime? // Próximo vencimento
-  resultado      String?   // "Procedente", "Improcedente", "Acordo"
-  arquivadoEm    DateTime? // Data em que o processo foi arquivado
-  status         String    @default("ATIVO") // ATIVO ou ARQUIVADO
+  dataPrazo   DateTime? // Próximo vencimento
+  resultado   String? // "Procedente", "Improcedente", "Acordo"
+  arquivadoEm DateTime? // Data em que o processo foi arquivado
+  status      String    @default("ATIVO") // ATIVO ou ARQUIVADO
 
   // --- CAMPOS SINCRONIZADOS VIA CNJ ---
-  tribunal        String?   // Ex: "TJSP"
-  orgaoJulgador   String?   // Ex: "1ª Vara Cível"
-  classeProcessual String?  // Ex: "Procedimento Comum"
-  assuntoPrincipal String?  // Ex: "Concessão"
-  sistema          String?  // Ex: "Pje"
-  dataAjuizamento DateTime? // Data de distribuição
-  sincronizadoEm  DateTime? // Última sincronização com o CNJ
+  tribunal         String? // Ex: "TJSP"
+  orgaoJulgador    String? // Ex: "1ª Vara Cível"
+  classeProcessual String? // Ex: "Procedimento Comum"
+  assuntoPrincipal String? // Ex: "Concessão"
+  sistema          String? // Ex: "Pje"
+  dataAjuizamento  DateTime? // Data de distribuição
+  sincronizadoEm   DateTime? // Última sincronização com o CNJ
 
   // --- CAMPO FINANCEIRO ---
   honorariosPercentual Float? // % de honorários pactuada (ex: 30.0 = 30%)
 
   // Relacionamentos
-  clienteId      String
-  cliente        Client   @relation(fields: [clienteId], references: [id])
-  movimentacoes  Movimentacao[]
-  transacoes     Transacao[]
-  historico      ProcessoHistorico[]
+  clienteId     String
+  cliente       Client              @relation(fields: [clienteId], references: [id])
+  movimentacoes Movimentacao[]
+  transacoes    Transacao[]
+  historico     ProcessoHistorico[]
+  documentos    Documento[]
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
 }
 
 model ProcessoHistorico {
-  id         String   @id @default(uuid())
-  processoId String
-  tenantId   String
-  acao       String   // "CRIADO", "EDITADO", "STATUS_ALTERADO", "ARQUIVADO", "REABERTO", etc.
-  descricao  String   
+  id                String   @id @default(uuid())
+  processoId        String
+  tenantId          String
+  acao              String // "CRIADO", "EDITADO", "STATUS_ALTERADO", "ARQUIVADO", "REABERTO", etc.
+  descricao         String
   valoresAnteriores String? // Json string
   valoresNovos      String? // Json string
-  createdAt  DateTime @default(now())
+  createdAt         DateTime @default(now())
 
-  processo   Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
-  
+  processo Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
+
   @@index([processoId])
   @@index([tenantId])
   @@map("processo_historicos")
@@ -110,13 +112,13 @@ model ProcessoHistorico {
 model Movimentacao {
   id         String   @id @default(uuid())
   processoId String
-  codigo     Int      // Código da movimentação no CNJ
-  nome       String   // Nome/descrição da movimentação
+  codigo     Int // Código da movimentação no CNJ
+  nome       String // Nome/descrição da movimentação
   dataHora   DateTime // Data e hora da movimentação
 
-  processo   Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
+  processo Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([processoId, codigo, dataHora]) // Evita duplicação
   @@index([processoId])
@@ -155,14 +157,14 @@ model Transacao {
   totalParcelas  Int?
   isFixa         Boolean            @default(false)
 
-  processoId     String?
-  processo       Processo?          @relation(fields: [processoId], references: [id])
-  clienteId      String?
-  cliente        Client?            @relation(fields: [clienteId], references: [id])
+  processoId String?
+  processo   Processo? @relation(fields: [processoId], references: [id])
+  clienteId  String?
+  cliente    Client?   @relation(fields: [clienteId], references: [id])
 
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  deletedAt      DateTime?          // Soft delete — preenchido no fechamento mensal
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete — preenchido no fechamento mensal
 
   @@index([tenantId])
   @@index([processoId])
@@ -173,23 +175,45 @@ model Transacao {
 }
 
 model RelatorioMensal {
-  id                    String   @id @default(uuid())
-  tenantId              String
-  mes                   Int      // 1-12
-  ano                   Int      // ex: 2026
-  totalReceitas         Float    @default(0)
-  totalDespesas         Float    @default(0)
-  totalHonorarios       Float    @default(0)
-  totalCustas           Float    @default(0)
-  totalRepasses         Float    @default(0)
-  totalOperacional      Float    @default(0)
-  quantidadeTransacoes  Int      @default(0)
-  saldoMes              Float    @default(0) // receitas - despesas
-  fechadoEm             DateTime @default(now())
+  id                   String   @id @default(uuid())
+  tenantId             String
+  mes                  Int // 1-12
+  ano                  Int // ex: 2026
+  totalReceitas        Float    @default(0)
+  totalDespesas        Float    @default(0)
+  totalHonorarios      Float    @default(0)
+  totalCustas          Float    @default(0)
+  totalRepasses        Float    @default(0)
+  totalOperacional     Float    @default(0)
+  quantidadeTransacoes Int      @default(0)
+  saldoMes             Float    @default(0) // receitas - despesas
+  fechadoEm            DateTime @default(now())
 
-  createdAt             DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([tenantId, mes, ano])
   @@index([tenantId])
   @@map("relatorios_mensais")
+}
+
+model Documento {
+  id           String   @id @default(uuid())
+  tenantId     String
+  nomeOriginal String
+  fileKey      String
+  tamanhoBytes Int
+  tipoMime     String
+  criadoEm     DateTime @default(now())
+
+  // Relacionamentos opcionais: um documento pode pertencer a um Cliente ou a um Processo
+  clienteId String?
+  cliente   Client? @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  processoId String?
+  processo   Processo? @relation(fields: [processoId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([clienteId])
+  @@index([processoId])
+  @@map("documentos")
 }

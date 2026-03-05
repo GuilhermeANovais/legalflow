@@ -19,6 +19,9 @@ export async function GET(req: Request) {
           orderBy: { dataHora: 'desc' },
           take: 5,
         },
+        documentos: {
+          orderBy: { criadoEm: 'desc' },
+        },
       },
       orderBy: { updatedAt: 'desc' }
     });

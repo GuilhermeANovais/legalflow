@@ -9,6 +9,7 @@ import {
 import { buscarDadosCNJ } from "@/app/actions";
 import { ToastProvider, useToast } from "@/app/dashboard/components/toast";
 import ProcessCard from "./ProcessCard";
+import ProcessDetailSheet from "./ProcessDetailSheet";
 
 // Definição de tipos
 interface Cliente {
@@ -89,6 +90,9 @@ function ProcessosContent() {
 
   // --- Estado das abas ---
   const [abaAtiva, setAbaAtiva] = useState<"ATIVO" | "ARQUIVADO">("ATIVO");
+
+  // --- Estado do Sheet de Detalhes ---
+  const [selectedProcesso, setSelectedProcesso] = useState<Processo | null>(null);
 
   // --- Estado do Modal de Arquivamento ---
   const [arquivamentoModal, setArquivamentoModal] = useState<{
@@ -508,6 +512,7 @@ function ProcessosContent() {
               onReabrir={handleReabrir}
               onWhatsApp={handleWhatsApp}
               onSincronizar={handleSincronizarCNJ}
+              onOpenDetail={setSelectedProcesso}
             />
           ))}
         </div>
@@ -964,6 +969,13 @@ function ProcessosContent() {
           </div>
         </div>
       )}
+
+      {/* ========== SHEET DE DETALHES DO PROCESSO ========== */}
+      <ProcessDetailSheet
+        processo={selectedProcesso}
+        open={!!selectedProcesso}
+        onOpenChange={(open) => { if (!open) setSelectedProcesso(null); }}
+      />
     </div>
   );
 }

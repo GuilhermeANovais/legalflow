@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import {
   Plus, User, MapPin, Phone, Mail,
-  Loader2, Building, ShieldCheck, Pencil, Trash2, AlertTriangle
+  Loader2, Building, ShieldCheck, Pencil, Trash2, AlertTriangle, FolderOpen
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ToastProvider, useToast } from "@/app/dashboard/components/toast";
+import ClientCard from "./ClientCard";
+import ClientDetailSheet from "./ClientDetailSheet";
 
 function ClientesContent() {
   const router = useRouter();
@@ -18,6 +20,7 @@ function ClientesContent() {
 
   // Estado de edição
   const [editingCliente, setEditingCliente] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<"dados" | "documentos">("dados");
 
   // Estado do AlertDialog de exclusão
   const [deletingCliente, setDeletingCliente] = useState<any | null>(null);
@@ -76,6 +79,7 @@ function ClientesContent() {
     setIsModalOpen(false);
     setEditingCliente(null);
     setFormData(emptyForm);
+    setActiveTab("dados");
   };
 
   // Submeter (criar ou editar)
@@ -175,153 +179,30 @@ function ClientesContent() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {clientes.map((cliente) => (
-            <div key={cliente.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="flex justify-between items-start mb-4">
-                <div className={`p-3 rounded-2xl ${cliente.tipo === 'PF' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                  {cliente.tipo === 'PF' ? <User size={24} /> : <Building size={24} />}
-                </div>
-                <div className="flex items-center gap-1">
-                  {/* Botão Editar */}
-                  <button
-                    onClick={() => handleOpenEdit(cliente)}
-                    className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                    title="Editar cliente"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  {/* Botão Apagar */}
-                  <button
-                    onClick={() => setDeletingCliente(cliente)}
-                    className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                    title="Apagar cliente"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                  <span className="text-xs font-bold px-2 py-1 bg-slate-100 text-slate-500 rounded-lg uppercase ml-1">
-                    {cliente.status}
-                  </span>
-                </div>
-              </div>
-
-              <h3 className="text-xl font-bold text-slate-900 mb-1">{cliente.nome}</h3>
-              <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
-                <ShieldCheck size={14} className="text-emerald-500" />
-                {cliente.documento}
-              </div>
-
-              <div className="space-y-3 pt-6 border-t border-slate-50">
-                {cliente.email && (
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <Mail size={16} className="text-slate-400" /> {cliente.email}
-                  </div>
-                )}
-                {cliente.telefone && (
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <Phone size={16} className="text-slate-400" /> {cliente.telefone}
-                  </div>
-                )}
-                {cliente.endereco && (
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <MapPin size={16} className="text-slate-400" />
-                    <span className="truncate">{cliente.endereco}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            <ClientCard
+              key={cliente.id}
+              cliente={cliente}
+              onEdit={handleOpenEdit}
+              onDelete={(c, e) => { e.stopPropagation(); setDeletingCliente(c); }}
+              onOpenDetail={handleOpenEdit}
+            />
           ))}
         </div>
       )}
 
-      {/* Modal de Criação / Edição */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl animate-in zoom-in-95">
-            <h3 className="text-2xl font-bold mb-6">
-              {editingCliente ? "Editar Cliente" : "Novo Cliente"}
-            </h3>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Tipo</label>
-                  <select
-                    value={formData.tipo}
-                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                    className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
-                  >
-                    <option value="PF">Pessoa Física</option>
-                    <option value="PJ">Pessoa Jurídica</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Documento (CPF/CNPJ)</label>
-                  <input
-                    required
-                    value={formData.documento}
-                    onChange={(e) => setFormData({ ...formData, documento: e.target.value })}
-                    className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
-                    placeholder="000.000.000-00"
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Nome Completo</label>
-                  <input
-                    required
-                    value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                    className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
-                    placeholder="Nome do cliente ou Razão Social"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">E-mail</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">WhatsApp / Telefone</label>
-                  <input
-                    value={formData.telefone}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                    className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Endereço Completo</label>
-                  <input
-                    value={formData.endereco}
-                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                    className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-slate-50"
-                    placeholder="Rua, Número, Bairro, Cidade - UF"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2"
-                >
-                  {submitting && <Loader2 className="animate-spin" size={16} />}
-                  {editingCliente ? "Salvar Alterações" : "Salvar Cliente"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Sheet de Criação / Edição de Cliente */}
+      <ClientDetailSheet
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseModal();
+          else setIsModalOpen(true);
+        }}
+        editingCliente={editingCliente}
+        formData={formData}
+        setFormData={setFormData}
+        handleSubmit={handleSubmit}
+        submitting={submitting}
+      />
 
       {/* AlertDialog de Confirmação de Exclusão */}
       {deletingCliente && (
