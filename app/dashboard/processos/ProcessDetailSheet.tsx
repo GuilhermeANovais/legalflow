@@ -36,6 +36,8 @@ interface ProcessoHistorico {
     acao: string;
     descricao: string;
     createdAt: string;
+    valoresAnteriores?: string | null;
+    valoresNovos?: string | null;
 }
 
 interface Processo {
@@ -290,6 +292,15 @@ function TabResumo({ proc }: { proc: Processo }) {
     );
 }
 
+function parseMudancas(jsonStr?: string | null) {
+    if (!jsonStr) return null;
+    try {
+        return JSON.parse(jsonStr) as Record<string, any>;
+    } catch {
+        return null;
+    }
+}
+
 // ================================================
 // ABA MOVIMENTAÇÕES
 // ================================================
@@ -361,7 +372,55 @@ function TabMovimentacoes({ proc }: { proc: Processo }) {
                                     <p className="text-[12px] font-semibold text-slate-700 leading-snug line-clamp-2">
                                         {hist.descricao}
                                     </p>
-                                    <p className="text-[10px] text-slate-400 mt-0.5">
+                                    {(() => {
+                                        const ant = parseMudancas(hist.valoresAnteriores);
+                                        const nov = parseMudancas(hist.valoresNovos);
+                                        if (!ant || !nov) return null;
+
+                                        const chaves = Object.keys(nov).filter(k =>
+                                            !['updatedAt', 'id', 'tenantId', 'processoId', 'createdAt'].includes(k) &&
+                                            ant[k] !== nov[k]
+                                        );
+
+                                        if (chaves.length === 0) return null;
+
+                                        return (
+                                            <div className="mt-2 text-[11px] bg-slate-50 p-2.5 rounded border border-slate-100 space-y-1.5">
+                                                <p className="font-semibold text-slate-500 mb-1">Detalhes da alteração:</p>
+                                                {chaves.map((key) => {
+                                                    const de = ant[key];
+                                                    const para = nov[key];
+
+                                                    const formatValor = (v: any) => {
+                                                        if (v === null || v === undefined || v === '') return <span className="text-slate-400 italic">vazio</span>;
+                                                        if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
+                                                        if (typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}T/)) {
+                                                            try {
+                                                                return format(new Date(v), "dd/MM/yyyy", { locale: ptBR });
+                                                            } catch {
+                                                                return v;
+                                                            }
+                                                        }
+                                                        return String(v);
+                                                    };
+
+                                                    return (
+                                                        <div key={key} className="grid grid-cols-[80px_1fr] md:grid-cols-[100px_1fr] gap-2 items-start text-slate-600">
+                                                            <span className="font-medium text-slate-700 capitalize">
+                                                                {key.replace(/([A-Z])/g, ' $1').trim()}
+                                                            </span>
+                                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                                                <span className="line-through text-slate-400">{formatValor(de)}</span>
+                                                                <span className="hidden sm:inline text-slate-300">→</span>
+                                                                <span className="font-medium text-emerald-600">{formatValor(para)}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
+                                    <p className="text-[10px] text-slate-400 mt-1">
                                         {format(new Date(hist.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                     </p>
                                 </div>
