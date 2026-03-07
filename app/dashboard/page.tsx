@@ -9,7 +9,8 @@ import {
   Target,
   CalendarDays,
   Clock,
-  Briefcase
+  Briefcase,
+  User
 } from "lucide-react";
 import { startOfMonth, subMonths, startOfDay, endOfDay, addDays, format, isBefore, isToday, isTomorrow, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -102,7 +103,7 @@ async function getDashboardData(userId: string) {
       where: { tenantId: userId, concluido: false },
       orderBy: { dataVencimento: 'asc' },
       take: 5,
-      include: { processo: { select: { titulo: true, numero: true } } }
+      include: { processo: { select: { titulo: true, numero: true, cliente: { select: { nome: true } } } } }
     }),
     db.movimentacao.findMany({
       where: { processo: { tenantId: userId } },
@@ -310,7 +311,14 @@ export default async function DashboardPage() {
                         </TableCell>
                         <TableCell>
                           <p className="text-sm font-medium text-zinc-900 line-clamp-1">{prazo.titulo}</p>
-                          <p className="text-xs text-zinc-500 line-clamp-1">{prazo.processo?.titulo || prazo.processo?.numero}</p>
+                          <p className="text-xs text-zinc-600 line-clamp-1 mt-0.5">
+                            <span className="font-semibold">Processo:</span> {prazo.processo?.titulo || prazo.processo?.numero}
+                          </p>
+                          {prazo.processo?.cliente?.nome && (
+                            <p className="text-xs text-zinc-500 line-clamp-1 mt-0.5 flex items-center gap-1">
+                              <User className="h-3 w-3" /> {prazo.processo.cliente.nome}
+                            </p>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           {vHojeAmanha ? (
