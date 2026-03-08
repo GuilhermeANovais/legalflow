@@ -103,6 +103,26 @@ function ProcessosContent() {
 
   const { showToast } = useToast();
 
+  const handleValorCausaChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) {
+      setFormData(prev => ({ ...prev, valorCausa: "" }));
+      return;
+    }
+    const val = parseInt(digits, 10) / 100;
+    setFormData(prev => ({ ...prev, valorCausa: val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }));
+  };
+
+  const handleEditValorCausaChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) {
+      setEditFormData(prev => ({ ...prev, valorCausa: "" }));
+      return;
+    }
+    const val = parseInt(digits, 10) / 100;
+    setEditFormData(prev => ({ ...prev, valorCausa: val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }));
+  };
+
   // Estado do Formulário (com campos CNJ extras)
   const [formData, setFormData] = useState({
     titulo: "",
@@ -189,7 +209,7 @@ function ProcessosContent() {
       area: proc.area,
       fase: proc.fase,
       prioridade: proc.prioridade,
-      valorCausa: proc.valorCausa?.toString() || "",
+      valorCausa: (proc.valorCausa || proc.valorCausa === 0) ? proc.valorCausa.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "",
       dataPrazo: proc.dataPrazo ? proc.dataPrazo.split("T")[0] : "",
       polo: proc.polo || "ATIVO",
       clienteId: proc.clienteId,
@@ -203,10 +223,15 @@ function ProcessosContent() {
     setEditSubmitting(true);
 
     try {
+      const payload = {
+        ...editFormData,
+        valorCausa: editFormData.valorCausa ? parseFloat(editFormData.valorCausa.replace(/\./g, "").replace(",", ".")) : null
+      };
+
       const res = await fetch(`/api/processos/${editingProcesso.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editFormData),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error();
 
@@ -313,7 +338,7 @@ function ProcessosContent() {
         titulo: res.dados!.titulo,
         area: res.dados!.area,
         fase: res.dados!.fase,
-        valorCausa: res.dados!.valorCausa.toString(),
+        valorCausa: (res.dados!.valorCausa || res.dados!.valorCausa === 0) ? res.dados!.valorCausa.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "",
         prioridade: res.dados!.prioridade,
         // Campos CNJ extras
         tribunal: res.dados!.tribunal,
@@ -370,7 +395,7 @@ function ProcessosContent() {
         polo: formData.polo,
         area: formData.area,
         prioridade: formData.prioridade,
-        valorCausa: formData.valorCausa,
+        valorCausa: formData.valorCausa ? parseFloat(formData.valorCausa.replace(/\./g, "").replace(",", ".")) : 0,
         fase: formData.fase,
         dataPrazo: formData.dataPrazo,
         tribunal: formData.tribunal,
@@ -432,91 +457,93 @@ function ProcessosContent() {
   const hasCnjPreview = !!(formData.tribunal || formData.classeProcessual);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      {/* Cabeçalho */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">Processos</h2>
-          <p className="text-slate-500">Gestão inteligente de casos judiciais e prazos.</p>
+    <>
+      <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        {/* Cabeçalho */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900">Processos</h2>
+            <p className="text-slate-500">Gestão inteligente de casos judiciais e prazos.</p>
+          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg w-full md:w-auto justify-center"
+          >
+            <Plus size={20} /> Novo Processo
+          </button>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg w-full md:w-auto justify-center"
-        >
-          <Plus size={20} /> Novo Processo
-        </button>
-      </div>
 
-      {/* ========== ABAS (Ativos / Arquivados) ========== */}
-      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-        <button
-          onClick={() => setAbaAtiva("ATIVO")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${abaAtiva === "ATIVO"
-            ? "bg-white text-slate-900 shadow-sm"
-            : "text-slate-500 hover:text-slate-700"
-            }`}
-        >
-          <Briefcase size={16} />
-          Ativos
-          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${abaAtiva === "ATIVO" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
-            }`}>
-            {processosAtivos.length}
-          </span>
-        </button>
-        <button
-          onClick={() => setAbaAtiva("ARQUIVADO")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${abaAtiva === "ARQUIVADO"
-            ? "bg-white text-slate-900 shadow-sm"
-            : "text-slate-500 hover:text-slate-700"
-            }`}
-        >
-          <Archive size={16} />
-          Arquivados
-          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${abaAtiva === "ARQUIVADO" ? "bg-slate-700 text-white" : "bg-slate-200 text-slate-500"
-            }`}>
-            {processosArquivados.length}
-          </span>
-        </button>
-      </div>
+        {/* ========== ABAS (Ativos / Arquivados) ========== */}
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setAbaAtiva("ATIVO")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${abaAtiva === "ATIVO"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+              }`}
+          >
+            <Briefcase size={16} />
+            Ativos
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${abaAtiva === "ATIVO" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
+              }`}>
+              {processosAtivos.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setAbaAtiva("ARQUIVADO")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${abaAtiva === "ARQUIVADO"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+              }`}
+          >
+            <Archive size={16} />
+            Arquivados
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${abaAtiva === "ARQUIVADO" ? "bg-slate-700 text-white" : "bg-slate-200 text-slate-500"
+              }`}>
+              {processosArquivados.length}
+            </span>
+          </button>
+        </div>
 
-      {/* Grid de Cards */}
-      {loading ? (
-        <div className="flex justify-center p-12"><Loader2 className="animate-spin text-slate-400" /></div>
-      ) : processosFiltrados.length === 0 ? (
-        <div className="text-center p-12 bg-white rounded-3xl border border-dashed border-slate-200">
-          {abaAtiva === "ATIVO" ? (
-            <>
-              <Scale className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900">Nenhum processo ativo</h3>
-              <p className="text-slate-500">Cadastre seu primeiro caso para começar.</p>
-            </>
-          ) : (
-            <>
-              <Archive className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900">Nenhum processo arquivado</h3>
-              <p className="text-slate-500">Processos concluídos aparecerão aqui.</p>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {processosFiltrados.map((proc) => (
-            <ProcessCard
-              key={proc.id}
-              proc={proc}
-              isSyncing={sincronizando[proc.id] || false}
-              onEdit={handleOpenEdit}
-              onDelete={handleDeleteClick}
-              onPrioridadeChange={handlePrioridadeChange}
-              onArquivar={handleAbrirModalArquivamento}
-              onReabrir={handleReabrir}
-              onWhatsApp={handleWhatsApp}
-              onSincronizar={handleSincronizarCNJ}
-              onOpenDetail={setSelectedProcesso}
-            />
-          ))}
-        </div>
-      )}
+        {/* Grid de Cards */}
+        {loading ? (
+          <div className="flex justify-center p-12"><Loader2 className="animate-spin text-slate-400" /></div>
+        ) : processosFiltrados.length === 0 ? (
+          <div className="text-center p-12 bg-white rounded-3xl border border-dashed border-slate-200">
+            {abaAtiva === "ATIVO" ? (
+              <>
+                <Scale className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900">Nenhum processo ativo</h3>
+                <p className="text-slate-500">Cadastre seu primeiro caso para começar.</p>
+              </>
+            ) : (
+              <>
+                <Archive className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900">Nenhum processo arquivado</h3>
+                <p className="text-slate-500">Processos concluídos aparecerão aqui.</p>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {processosFiltrados.map((proc) => (
+              <ProcessCard
+                key={proc.id}
+                proc={proc}
+                isSyncing={sincronizando[proc.id] || false}
+                onEdit={handleOpenEdit}
+                onDelete={handleDeleteClick}
+                onPrioridadeChange={handlePrioridadeChange}
+                onArquivar={handleAbrirModalArquivamento}
+                onReabrir={handleReabrir}
+                onWhatsApp={handleWhatsApp}
+                onSincronizar={handleSincronizarCNJ}
+                onOpenDetail={setSelectedProcesso}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ========== MODAL DE CONFIRMAÇÃO DE ARQUIVAMENTO ========== */}
       {arquivamentoModal.aberto && (
@@ -810,9 +837,12 @@ function ProcessosContent() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-bold text-slate-700">Valor da Causa (R$)</label>
-                  <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                    type="number" step="0.01"
-                    value={formData.valorCausa} onChange={e => setFormData({ ...formData, valorCausa: e.target.value })} />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">R$</span>
+                    <input className="w-full p-3 pl-9 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      type="text" placeholder="0,00"
+                      value={formData.valorCausa} onChange={e => handleValorCausaChange(e.target.value)} />
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-bold text-slate-700">Área</label>
@@ -906,9 +936,12 @@ function ProcessosContent() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-bold text-slate-700">Valor da Causa (R$)</label>
-                  <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                    type="number" step="0.01"
-                    value={editFormData.valorCausa} onChange={e => setEditFormData({ ...editFormData, valorCausa: e.target.value })} />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">R$</span>
+                    <input className="w-full p-3 pl-9 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      type="text" placeholder="0,00"
+                      value={editFormData.valorCausa} onChange={e => handleEditValorCausaChange(e.target.value)} />
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-bold text-slate-700">Área</label>
@@ -976,7 +1009,7 @@ function ProcessosContent() {
         open={!!selectedProcesso}
         onOpenChange={(open) => { if (!open) setSelectedProcesso(null); }}
       />
-    </div>
+    </>
   );
 }
 
