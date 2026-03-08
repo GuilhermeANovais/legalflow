@@ -207,6 +207,12 @@ function TabResumo({ proc }: { proc: Processo }) {
                         {proc.prioridade}
                     </p>
                 </div>
+                <div className="bg-white rounded-xl border border-slate-100 p-3">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Valor da Causa</span>
+                    <p className="text-[12px] font-bold text-slate-800 mt-0.5">
+                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(proc.valorCausa || 0)}
+                    </p>
+                </div>
                 {proc.dataPrazo && (
                     <div className="bg-white rounded-xl border border-slate-100 p-3">
                         <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">

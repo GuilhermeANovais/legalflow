@@ -1,0 +1,3 @@
+app/api/webhooks/intimacoes/route.ts(1,24): error TS2307: Cannot find module '@/lib/prisma' or its corresponding type declarations.
+lib/services/legal-ai.service.ts(1,24): error TS2307: Cannot find module '@/lib/prisma' or its corresponding type declarations.
+lib/services/notification.service.ts(1,24): error TS2307: Cannot find module '@/lib/prisma' or its corresponding type declarations.
