@@ -238,7 +238,7 @@ export default function ProcessCard({
     return (
         <div
             onClick={() => onOpenDetail(proc)}
-            className={`relative bg-white rounded-2xl border transition-all duration-300 group overflow-hidden cursor-pointer ${isArquivado
+            className={`relative bg-white rounded-2xl border transition-all duration-300 group cursor-pointer ${isArquivado
                 ? "opacity-50 bg-slate-50/80 border-slate-100"
                 : "hover:shadow-xl hover:shadow-slate-900/[0.06] border-slate-200/80 shadow-sm shadow-slate-100 hover:border-slate-300/80 hover:-translate-y-0.5"
                 }`}
@@ -321,6 +321,14 @@ export default function ProcessCard({
                             </span>
                         </div>
                     )}
+
+                    {/* Valor da Causa */}
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                        <span className="font-bold text-slate-400">R$</span>
+                        <span className="font-medium tracking-tight">
+                            {proc.valorCausa ? proc.valorCausa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00"}
+                        </span>
+                    </div>
 
                     {/* Prazo — pulsante se vencido */}
                     {!isArquivado && proc.dataPrazo && (
