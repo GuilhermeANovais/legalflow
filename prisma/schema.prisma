@@ -34,6 +34,7 @@ model Client {
   transacoes Transacao[]
   documentos Documento[]
 
+  @@unique([tenantId, documento])
   @@index([tenantId])
 }
 
@@ -57,8 +58,10 @@ model Processo {
   fase           String  @default("Conhecimento")
   prioridade     String  @default("MEDIA")
   valorCausa     Float   @default(0)
-  parteContraria String?
+  parteAutora    String? // Nome da parte autora (polo ativo / autor)
+  parteContraria String? // Nome da parte contrária (polo passivo / réu)
   polo           String  @default("ATIVO") // ATIVO (Autor/Exequente) ou PASSIVO (Réu/Executado)
+  rito           String  @default("COMUM") // COMUM ou JEC (Juizado Especial Cível/Criminal)
 
   // --- CAMPOS DO SISTEMA ---
   dataPrazo   DateTime? // Próximo vencimento
@@ -86,10 +89,12 @@ model Processo {
   historico     ProcessoHistorico[]
   documentos    Documento[]
   prazos        Prazo[]
+  audiencias    Audiencia[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([tenantId, numero])
   @@index([tenantId])
 }
 
@@ -240,4 +245,27 @@ model Prazo {
   @@index([processoId])
   @@index([usuarioId])
   @@map("prazos")
+}
+
+// === MÓDULO AUDIÊNCIAS ===
+
+model Audiencia {
+  id          String    @id @default(uuid())
+  tenantId    String
+  processoId  String
+  titulo      String
+  dataHora    DateTime
+  local       String?
+  tipo        String    @default("AUDIENCIA") // AUDIENCIA, SESSAO, OUTRO
+  observacoes String?
+  concluida   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  processo Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([processoId])
+  @@index([dataHora])
+  @@map("audiencias")
 }

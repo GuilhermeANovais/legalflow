@@ -10,8 +10,14 @@ export async function GET(req: Request) {
     const { userId } = await auth();
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
+    const { searchParams } = new URL(req.url);
+    const clienteId = searchParams.get("clienteId");
+
+    const where: Record<string, unknown> = { tenantId: userId };
+    if (clienteId) where.clienteId = clienteId;
+
     const processos = await db.processo.findMany({
-      where: { tenantId: userId },
+      where,
       include: {
         cliente: true,
         historico: { orderBy: { createdAt: "desc" } },
@@ -28,6 +34,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(processos);
   } catch (error) {
+    console.error("[ERRO_GET_PROCESSOS]:", error);
     return new NextResponse("Erro interno", { status: 500 });
   }
 }
@@ -42,6 +49,8 @@ export async function POST(req: Request) {
     const {
       titulo, numero, clienteId, area, valorCausa, prioridade, fase, dataPrazo,
       polo, novoCliente,
+      // Novos campos
+      parteAutora, parteContraria, rito,
       // Campos CNJ (vindos do autopreencher)
       tribunal, orgaoJulgador, classeProcessual, assuntoPrincipal, sistema, dataAjuizamento
     } = body;
@@ -76,6 +85,9 @@ export async function POST(req: Request) {
       valorCausa: parseFloat(valorCausa || 0),
       status: "ATIVO",
       dataPrazo: parseDateSafe(dataPrazo),
+      parteAutora: parteAutora || null,
+      parteContraria: parteContraria || null,
+      rito: rito || "COMUM",
       // Campos CNJ (se vieram do autopreencher)
       ...(hasCnjData && {
         tribunal,
@@ -233,6 +245,7 @@ export async function DELETE(req: Request) {
 
     return new NextResponse("Deletado com sucesso", { status: 200 });
   } catch (error) {
+    console.error("[ERRO_DELETE_PROCESSO]:", error);
     return new NextResponse("Erro ao deletar", { status: 500 });
   }
 }

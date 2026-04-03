@@ -11,6 +11,8 @@ import { useState } from "react";
 import { consultarIA } from "@/app/actions";
 import { DocumentUploader, DocumentInfo } from "@/app/dashboard/components/DocumentUploader";
 import { PrazoTab } from "./components/PrazoTab";
+import { AudienciasTab } from "./components/AudienciasTab";
+import { FinanceiroTab } from "./components/FinanceiroTab";
 
 import {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -64,6 +66,8 @@ interface Processo {
     movimentacoes?: Movimentacao[];
     historico?: ProcessoHistorico[];
     documentos?: DocumentInfo[];
+    parteAutora?: string | null;
+    parteContraria?: string | null;
 }
 
 interface ProcessDetailSheetProps {
@@ -224,6 +228,27 @@ function TabResumo({ proc }: { proc: Processo }) {
                     </div>
                 )}
             </div>
+
+            {/* Partes do processo */}
+            {(proc.parteAutora || proc.parteContraria) && (
+                <div className="bg-white rounded-xl border border-slate-100 p-4">
+                    <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3">Partes</h4>
+                    <div className="space-y-2">
+                        {proc.parteAutora && (
+                            <div className="flex items-start gap-2">
+                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md flex-shrink-0">Autor</span>
+                                <span className="text-[12px] font-semibold text-slate-700">{proc.parteAutora}</span>
+                            </div>
+                        )}
+                        {proc.parteContraria && (
+                            <div className="flex items-start gap-2">
+                                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md flex-shrink-0">Réu</span>
+                                <span className="text-[12px] font-semibold text-slate-700">{proc.parteContraria}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Painel IA */}
             {proc.status !== "ARQUIVADO" && (
@@ -499,7 +524,7 @@ export default function ProcessDetailSheet({
                 {/* Tabs */}
                 <div className="px-6 py-4">
                     <Tabs defaultValue="resumo">
-                        <TabsList className="w-full grid border-b border-slate-100 flex overflow-x-auto no-scrollbar scroll-smooth" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                        <TabsList className="w-full grid border-b border-slate-100 flex overflow-x-auto no-scrollbar scroll-smooth" style={{ gridTemplateColumns: 'repeat(6, minmax(0, 1fr))' }}>
                             <TabsTrigger value="resumo" className="text-xs font-bold">
                                 Resumo
                             </TabsTrigger>
@@ -511,6 +536,12 @@ export default function ProcessDetailSheet({
                             </TabsTrigger>
                             <TabsTrigger value="prazos" className="text-xs font-bold">
                                 Prazos
+                            </TabsTrigger>
+                            <TabsTrigger value="audiencias" className="text-xs font-bold">
+                                Audiências
+                            </TabsTrigger>
+                            <TabsTrigger value="financeiro" className="text-xs font-bold">
+                                Financeiro
                             </TabsTrigger>
                         </TabsList>
 
@@ -528,6 +559,14 @@ export default function ProcessDetailSheet({
 
                         <TabsContent value="prazos">
                             <PrazoTab processoId={processo.id} movimentacoes={processo.movimentacoes} />
+                        </TabsContent>
+
+                        <TabsContent value="audiencias">
+                            <AudienciasTab processoId={processo.id} />
+                        </TabsContent>
+
+                        <TabsContent value="financeiro">
+                            <FinanceiroTab processoId={processo.id} clienteId={processo.clienteId} />
                         </TabsContent>
                     </Tabs>
                 </div>

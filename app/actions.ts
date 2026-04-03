@@ -5,6 +5,10 @@ import { consultarCNJ } from "@/lib/cnj";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 
+// Sanitiza strings antes de inserir em prompts de IA (previne prompt injection)
+const sanitizePromptInput = (s: string, maxLength = 300): string =>
+  s.replace(/[<>"'`{}[\]\\]/g, "").replace(/\n{3,}/g, "\n\n").slice(0, maxLength);
+
 // Agora aceitamos o parâmetro 'modo'
 export async function consultarIA(titulo: string, numero: string, fase: string, modo: 'CLIENTE' | 'JURIDICO') {
   try {
@@ -12,11 +16,15 @@ export async function consultarIA(titulo: string, numero: string, fase: string, 
 
     let prompt = "";
 
+    const safeTitle = sanitizePromptInput(titulo);
+    const safeNumero = sanitizePromptInput(numero, 30);
+    const safeFase = sanitizePromptInput(fase, 100);
+
     if (modo === 'CLIENTE') {
       // PROMPT 1: Resumo Executivo (Rápido)
       prompt = `
         Você é um assistente jurídico. Gere um roteiro rápido para eu falar com o cliente.
-        Processo: ${titulo} (Fase: ${fase})
+        Processo: ${safeTitle} (Fase: ${safeFase})
 
         Responda EXATAMENTE neste formato:
         📋 **Resumo**: (1 frase simples sobre o que é o caso).
@@ -26,7 +34,7 @@ export async function consultarIA(titulo: string, numero: string, fase: string, 
     } else {
       // PROMPT 2: Pesquisa Jurídica (Artigos e Teses)
       prompt = `
-        Aja como um advogado sênior especialista. Para a ação "${titulo}", forneça a fundamentação jurídica.
+        Aja como um advogado sênior especialista. Para a ação "${safeTitle}", forneça a fundamentação jurídica.
         
         Responda EXATAMENTE neste formato estruturado:
         

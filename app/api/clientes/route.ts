@@ -53,7 +53,10 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(novoCliente);
-  } catch (error) {
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      return new NextResponse("Cliente com este CPF/CNPJ já está cadastrado.", { status: 409 });
+    }
     console.log("[CLIENTES_POST]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }

@@ -6,8 +6,9 @@ import {
     SheetDescription,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, FolderOpen, Loader2, Building } from "lucide-react";
+import { User, FolderOpen, Loader2, Building, Scale, AlertCircle } from "lucide-react";
 import { DocumentUploader } from "@/app/dashboard/components/DocumentUploader";
+import { useState, useEffect } from "react";
 
 interface Cliente {
     id: string;
@@ -20,6 +21,17 @@ interface Cliente {
     status: string;
     documentos?: any[];
 }
+
+interface ProcessoVinculado {
+    id: string;
+    numero: string;
+    titulo: string;
+    area: string;
+    fase: string;
+    status: string;
+    prioridade: string;
+}
+
 
 interface ClientDetailSheetProps {
     open: boolean;
@@ -42,6 +54,22 @@ export default function ClientDetailSheet({
 }: ClientDetailSheetProps) {
     const isEditing = !!editingCliente;
     const isPF = formData.tipo === "PF";
+
+    // Processos vinculados ao cliente
+    const [processosCliente, setProcessosCliente] = useState<ProcessoVinculado[]>([]);
+    const [loadingProcessos, setLoadingProcessos] = useState(false);
+
+    useEffect(() => {
+        if (isEditing && editingCliente) {
+            setLoadingProcessos(true);
+            fetch(`/api/processos?clienteId=${editingCliente.id}`)
+                .then(r => r.json())
+                .then(data => setProcessosCliente(Array.isArray(data) ? data.filter((p: ProcessoVinculado) => p) : []))
+                .catch(() => setProcessosCliente([]))
+                .finally(() => setLoadingProcessos(false));
+        }
+    }, [isEditing, editingCliente?.id]);
+
 
     const formatDocumento = (value: string, tipo: string) => {
         const numbers = value.replace(/\D/g, "");
@@ -90,10 +118,14 @@ export default function ClientDetailSheet({
 
                     <Tabs defaultValue="dados" className="w-full">
                         {isEditing && (
-                            <TabsList className="w-full grid grid-cols-2 mb-6">
+                            <TabsList className="w-full grid grid-cols-3 mb-6">
                                 <TabsTrigger value="dados" className="text-xs font-bold">
                                     <User size={14} className="mr-1.5" />
-                                    Dados Cadastrais
+                                    Dados
+                                </TabsTrigger>
+                                <TabsTrigger value="processos" className="text-xs font-bold">
+                                    <Scale size={14} className="mr-1.5" />
+                                    Processos
                                 </TabsTrigger>
                                 <TabsTrigger value="documentos" className="text-xs font-bold">
                                     <FolderOpen size={14} className="mr-1.5" />
@@ -207,6 +239,57 @@ export default function ClientDetailSheet({
                                         clienteId={editingCliente.id}
                                         documentosIniciais={editingCliente.documentos || []}
                                     />
+                                </div>
+                            </TabsContent>
+                        )}
+
+                        {/* ABA PROCESSOS VINCULADOS */}
+                        {isEditing && (
+                            <TabsContent value="processos" className="mt-0 focus-visible:outline-none">
+                                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+                                    <h3 className="text-[11px] uppercase font-black text-slate-400 tracking-wider">
+                                        Processos Vinculados
+                                    </h3>
+
+                                    {loadingProcessos ? (
+                                        <div className="flex justify-center py-8">
+                                            <Loader2 className="animate-spin text-slate-300" size={24} />
+                                        </div>
+                                    ) : processosCliente.length === 0 ? (
+                                        <div className="text-center py-10 text-slate-400">
+                                            <Scale className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                            <p className="text-xs">Nenhum processo vinculado a este cliente.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {processosCliente.map(proc => (
+                                                <div key={proc.id} className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors bg-white">
+                                                    <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${
+                                                        proc.status === "ATIVO" ? "bg-emerald-400" : "bg-slate-300"
+                                                    }`} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[12px] font-semibold text-slate-800 truncate">
+                                                            {proc.titulo}
+                                                        </p>
+                                                        <div className="flex gap-2 mt-0.5 flex-wrap">
+                                                            <span className="text-[10px] font-mono text-slate-400">{proc.numero}</span>
+                                                            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded">
+                                                                {proc.area}
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-400">{proc.fase}</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${
+                                                        proc.prioridade === "URGENTE" ? "bg-red-100 text-red-600" :
+                                                        proc.prioridade === "ALTA" ? "bg-amber-100 text-amber-600" :
+                                                        "bg-slate-100 text-slate-500"
+                                                    }`}>
+                                                        {proc.prioridade === "MEDIA" ? "Normal" : proc.prioridade}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </TabsContent>
                         )}

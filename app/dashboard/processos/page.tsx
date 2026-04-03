@@ -10,6 +10,7 @@ import { buscarDadosCNJ } from "@/app/actions";
 import { ToastProvider, useToast } from "@/app/dashboard/components/toast";
 import ProcessCard from "./ProcessCard";
 import ProcessDetailSheet from "./ProcessDetailSheet";
+import { AREAS_LIST, getFases, PRIORIDADES, temRito } from "@/lib/legal-constants";
 
 // Definição de tipos
 interface Cliente {
@@ -46,6 +47,9 @@ interface Processo {
   arquivadoEm: string | null;
   clienteId: string;
   polo?: string;
+  parteAutora?: string | null;
+  parteContraria?: string | null;
+  rito?: string | null;
   cliente?: Cliente;
   tribunal?: string | null;
   orgaoJulgador?: string | null;
@@ -134,6 +138,9 @@ function ProcessosContent() {
     valorCausa: "",
     fase: "Inicial",
     dataPrazo: "",
+    parteAutora: "",
+    parteContraria: "",
+    rito: "COMUM",
     // Campos de novo cliente inline
     novoClienteNome: "",
     novoClienteDocumento: "",
@@ -318,7 +325,8 @@ function ProcessosContent() {
       return;
     }
     const numero = telefone.replace(/\D/g, "");
-    window.open(`https://wa.me/55${numero}?text=Olá ${nome}, tudo bem? Gostaria de falar sobre o andamento do seu processo.`, "_blank");
+    const mensagem = encodeURIComponent(`Olá ${nome || "cliente"}, tudo bem? Gostaria de falar sobre o andamento do seu processo.`);
+    window.open(`https://wa.me/55${numero}?text=${mensagem}`, "_blank");
   };
 
   // Buscar no CNJ (Modal de criação)
@@ -398,6 +406,9 @@ function ProcessosContent() {
         valorCausa: formData.valorCausa ? parseFloat(formData.valorCausa.replace(/\./g, "").replace(",", ".")) : 0,
         fase: formData.fase,
         dataPrazo: formData.dataPrazo,
+        parteAutora: formData.parteAutora || null,
+        parteContraria: formData.parteContraria || null,
+        rito: formData.rito || "COMUM",
         tribunal: formData.tribunal,
         orgaoJulgador: formData.orgaoJulgador,
         classeProcessual: formData.classeProcessual,
@@ -431,6 +442,7 @@ function ProcessosContent() {
       setFormData({
         titulo: "", numero: "", clienteId: "", polo: "ATIVO", area: "Cível",
         prioridade: "Normal", valorCausa: "", fase: "Inicial", dataPrazo: "",
+        parteAutora: "", parteContraria: "", rito: "COMUM",
         novoClienteNome: "", novoClienteDocumento: "", novoClienteTipo: "PF",
         tribunal: "", orgaoJulgador: "", classeProcessual: "",
         assuntoPrincipal: "", sistema: "", dataAjuizamento: "",
@@ -448,6 +460,7 @@ function ProcessosContent() {
     setFormData({
       titulo: "", numero: "", clienteId: "", polo: "ATIVO", area: "Cível",
       prioridade: "Normal", valorCausa: "", fase: "Inicial", dataPrazo: "",
+      parteAutora: "", parteContraria: "", rito: "COMUM",
       novoClienteNome: "", novoClienteDocumento: "", novoClienteTipo: "PF",
       tribunal: "", orgaoJulgador: "", classeProcessual: "",
       assuntoPrincipal: "", sistema: "", dataAjuizamento: "",
@@ -845,17 +858,68 @@ function ProcessosContent() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-slate-700">Área</label>
-                  <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                    value={formData.area} onChange={e => setFormData({ ...formData, area: e.target.value })} />
+                  <label className="text-sm font-bold text-slate-700">Área Jurídica</label>
+                  <select className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    value={formData.area}
+                    onChange={e => {
+                      const novaArea = e.target.value;
+                      const primeiraFase = getFases(novaArea, formData.rito as "COMUM" | "JEC")[0] || "Inicial";
+                      setFormData({ ...formData, area: novaArea, fase: primeiraFase });
+                    }}>
+                    {AREAS_LIST.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
                 </div>
               </div>
+
+              {/* Toggle JEC (Juizado Especial) */}
+              {temRito(formData.area) && (
+                <div className="flex gap-3">
+                  {(["COMUM", "JEC"] as const).map(r => (
+                    <button key={r} type="button"
+                      onClick={() => {
+                        const primeiraFase = getFases(formData.area, r)[0] || "Inicial";
+                        setFormData({ ...formData, rito: r, fase: primeiraFase });
+                      }}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                        formData.rito === r
+                          ? "border-slate-900 bg-slate-900 text-white"
+                          : "border-slate-200 text-slate-500 hover:border-slate-300"
+                      }`}
+                    >
+                      {r === "COMUM" ? "Rito Comum" : "Juizado Especial (JEC)"}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Fase */}
               <div>
                 <label className="text-sm font-bold text-slate-700">Fase Atual</label>
-                <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  value={formData.fase} onChange={e => setFormData({ ...formData, fase: e.target.value })} />
+                <select className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  value={formData.fase}
+                  onChange={e => setFormData({ ...formData, fase: e.target.value })}>
+                  {getFases(formData.area, formData.rito as "COMUM" | "JEC").map(f => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Partes do Processo */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-bold text-slate-700">Parte Autora (Polo Ativo)</label>
+                  <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    placeholder="Nome do autor..."
+                    value={formData.parteAutora}
+                    onChange={e => setFormData({ ...formData, parteAutora: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-slate-700">Parte Contrária (Réu)</label>
+                  <input className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    placeholder="Nome do réu..."
+                    value={formData.parteContraria}
+                    onChange={e => setFormData({ ...formData, parteContraria: e.target.value })} />
+                </div>
               </div>
 
               <div className="pt-4 flex gap-3">
