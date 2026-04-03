@@ -494,7 +494,7 @@ export default function ProcessDetailSheet({
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="w-full sm:max-w-xl overflow-y-auto p-0"
+                className="w-full sm:max-w-2xl lg:max-w-3xl overflow-y-auto p-0"
                 showCloseButton={true}
             >
                 {/* Header */}

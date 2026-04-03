@@ -289,6 +289,7 @@ export default async function DashboardPage() {
                 Nenhum prazo pendente no momento.
               </div>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -334,6 +335,7 @@ export default async function DashboardPage() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -352,6 +354,7 @@ export default async function DashboardPage() {
                 Nenhuma movimentação registrada.
               </div>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -373,6 +376,7 @@ export default async function DashboardPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>

@@ -3,11 +3,12 @@ import { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
-import { LayoutDashboard, Users, Gavel, FileText, Settings, Menu, LogOut } from "lucide-react"; // <--- Importou Settings?
+import { LayoutDashboard, Users, Gavel, FileText, Settings } from "lucide-react";
 import Image from "next/image";
 import logoPic from "@/app/hor_legalflow.svg";
 import { db } from "@/lib/db";
 import { UserButton } from "@clerk/nextjs";
+import MobileNav from "./components/MobileNav";
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const user = await currentUser();
@@ -22,7 +23,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   });
 
   if (!escritorio) {
-    // Usa o nome do escritório informado no sign-up (unsafeMetadata) ou fallback
     const nomeEscritorio =
       (user.unsafeMetadata?.nomeEscritorio as string) || "Meu Escritório Jurídico";
 
@@ -34,13 +34,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     });
   }
 
-  // --- AQUI ESTÁ A LISTA DO MENU ---
   const navItems = [
-    { label: "Visão Geral", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Clientes", href: "/dashboard/clientes", icon: Users },
-    { label: "Processos", href: "/dashboard/processos", icon: Gavel },
-    { label: "Financeiro", href: "/dashboard/financeiro", icon: FileText },
-    { label: "Configurações", href: "/dashboard/configuracoes", icon: Settings }, // <--- ESTA LINHA É OBRIGATÓRIA
+    { label: "Visão Geral", href: "/dashboard", icon: "LayoutDashboard" },
+    { label: "Clientes", href: "/dashboard/clientes", icon: "Users" },
+    { label: "Processos", href: "/dashboard/processos", icon: "Gavel" },
+    { label: "Financeiro", href: "/dashboard/financeiro", icon: "FileText" },
+    { label: "Configurações", href: "/dashboard/configuracoes", icon: "Settings" },
   ];
 
   return (
@@ -52,16 +51,26 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 px-4 py-3 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors text-sm font-medium"
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const icons: Record<string, React.ElementType> = {
+              LayoutDashboard,
+              Users,
+              Gavel,
+              FileText,
+              Settings,
+            };
+            const Icon = icons[item.icon];
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-3 px-4 py-3 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors text-sm font-medium"
+              >
+                {Icon && <Icon className="h-5 w-5" />}
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-neutral-800 bg-neutral-900/50">
@@ -77,14 +86,19 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
       {/* Conteúdo Principal */}
       <main className="flex-1 md:ml-64 transition-all">
-        <header className="h-16 bg-white border-b border-neutral-200 flex items-center justify-between px-6 md:px-8 sticky top-0 z-40">
-          <div className="flex items-center gap-4">
-            {/* Mostra o nome do escritório vindo do banco */}
-            <h1 className="text-lg font-semibold text-neutral-800">{escritorio.nome}</h1>
+        <header className="h-16 bg-white border-b border-neutral-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
+          <div className="flex items-center gap-3">
+            {/* Menu hambúrguer — apenas mobile */}
+            <MobileNav navItems={navItems} escritorioNome={escritorio.nome} />
+            <h1 className="text-base font-semibold text-neutral-800 truncate">{escritorio.nome}</h1>
+          </div>
+          {/* UserButton visível no mobile */}
+          <div className="flex md:hidden">
+            <UserButton afterSignOutUrl="/" />
           </div>
         </header>
 
-        <div className="p-6 md:p-8 max-w-7xl mx-auto">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto">
           {children}
         </div>
       </main>

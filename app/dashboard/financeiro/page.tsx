@@ -331,27 +331,29 @@ function FinanceiroContent() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Financeiro</h1>
                     <p className="text-sm text-slate-500 mt-1">
                         Gestão de honorários, custas e repasses
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
-                >
-                    <Plus className="h-4 w-4" />
-                    Nova Transação
-                </button>
-                <button
-                    onClick={() => setShowRelatorioModal(true)}
-                    className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
-                >
-                    <Lock className="h-4 w-4" />
-                    Fechar Mês
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Nova Transação
+                    </button>
+                    <button
+                        onClick={() => setShowRelatorioModal(true)}
+                        className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                    >
+                        <Lock className="h-4 w-4" />
+                        Fechar Mês
+                    </button>
+                </div>
             </div>
 
             {/* Alerta de Repasses Pendentes */}
